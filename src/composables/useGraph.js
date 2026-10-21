@@ -190,25 +190,34 @@ export function useGraph(initialNodes = [], initialEdges = []) {
     activeWire.value = null;
   };
 
-  const addNode = (type, variant, camera) => {
+  const addNode = (type, variant, camera, customCoords = null) => {
     const id = 'n_' + Date.now();
     const tpl = NODE_TEMPLATES[type] || NODE_TEMPLATES.chip;
 
-    const baseX = camera
-      ? Math.round((160 - camera.x) / camera.zoom / GRID) * GRID
-      : 192;
-    const baseY = camera
-      ? Math.round((140 - camera.y) / camera.zoom / GRID) * GRID
-      : 96;
+    let posX, posY;
+    if (customCoords && typeof customCoords.x === 'number' && typeof customCoords.y === 'number') {
+      posX = Math.round(customCoords.x / GRID) * GRID;
+      posY = Math.round(customCoords.y / GRID) * GRID;
+    } else {
+      const baseX = camera
+        ? Math.round((160 - camera.x) / camera.zoom / GRID) * GRID
+        : 192;
+      const baseY = camera
+        ? Math.round((140 - camera.y) / camera.zoom / GRID) * GRID
+        : 96;
 
-    const offsetIndex = nodes.value.length % 5;
+      const offsetIndex = nodes.value.length % 5;
+      posX = baseX + offsetIndex * 72;
+      posY = baseY + offsetIndex * 48;
+    }
+
     const newNode = {
       id,
       type,
       variant: variant || 'cyan',
       groupLabel: `${type} (${variant || 'default'})`,
-      x: baseX + offsetIndex * 72,
-      y: baseY + offsetIndex * 48,
+      x: posX,
+      y: posY,
       ...JSON.parse(JSON.stringify(tpl))
     };
 

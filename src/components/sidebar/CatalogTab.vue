@@ -1,8 +1,20 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { NODE_CATALOG } from '@/constants/catalog';
+import NodeMiniPreview from './NodeMiniPreview.vue';
 
-const emit = defineEmits(['add-node']);
+const props = defineProps({
+  selectedModelType: {
+    type: String,
+    default: null
+  }
+});
+
+const emit = defineEmits([
+  'select-model',
+  'insert-center',
+  'drag-start'
+]);
 
 const search = ref('');
 
@@ -13,24 +25,30 @@ const filteredCatalog = computed(() => {
     (c) => c.name.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q)
   );
 });
+
+const onDragStart = (e, type, variantId) => {
+  e.dataTransfer.setData(
+    'application/json',
+    JSON.stringify({ type, variant: variantId })
+  );
+  e.dataTransfer.effectAllowed = 'copy';
+  emit('drag-start', { type, variant: variantId });
+};
 </script>
 
 <template>
-  <div class="flex-1 overflow-y-auto p-3 space-y-3 font-sans">
-    <!-- Quick Connection and Paste Tips -->
-    <div class="p-2.5 rounded bg-cyan-950/30 border border-cyan-800/50 text-[11px] text-slate-300 space-y-1.5 font-mono">
-      <div class="font-bold text-cyan-300 flex items-center gap-1.5">
-        <span>🔌</span> Dica de Conexão e Imagem:
+  <div class="flex-1 overflow-y-auto p-3 space-y-3 font-mono select-none">
+    <!-- Quick Tip -->
+    <div class="p-2.5 rounded bg-cyan-950/20 border border-cyan-800/40 text-[10px] text-slate-300 space-y-1 font-sans leading-relaxed">
+      <div class="font-bold text-cyan-300 flex items-center gap-1.5 font-mono">
+        <span>⚡</span> Ações Rápidas:
       </div>
-      <div class="text-[10px] leading-relaxed text-slate-400">
-        1. Passe o mouse num bloco e <b>arraste a bolinha azul</b> de qualquer borda até outro bloco.
-      </div>
-      <div class="text-[10px] leading-relaxed text-slate-400">
-        2. Selecione um bloco e aperte <kbd class="bg-slate-800 px-1 py-0.5 rounded text-cyan-300 font-bold">Ctrl+V</kbd> para colar prints da área de transferência.
-      </div>
+      <div>• <b>Clique</b> para abrir a barra de variações ao lado.</div>
+      <div>• <b>Arraste</b> para soltar exatamente onde quiser no canvas.</div>
+      <div>• <b>2 cliques</b> para inserir no centro da visão atual.</div>
     </div>
 
-    <!-- Filter input -->
+    <!-- Search input -->
     <div class="relative">
       <input
         v-model="search"
@@ -46,45 +64,51 @@ const filteredCatalog = computed(() => {
       </button>
     </div>
 
-    <!-- Catalog Grid -->
-    <div class="space-y-2">
+    <!-- Clean, High-End Model Cards Grid -->
+    <div class="space-y-2.5">
       <div
         v-for="item in filteredCatalog"
         :key="item.type"
-        class="p-2.5 rounded border border-slate-800/90 bg-[#11161f] hover:border-slate-700 transition group"
+        draggable="true"
+        @dragstart="onDragStart($event, item.type, item.variants[0]?.id || 'default')"
+        @click="emit('select-model', item)"
+        @dblclick="emit('insert-center', { type: item.type, variant: item.variants[0]?.id || 'default' })"
+        :class="
+          selectedModelType === item.type
+            ? 'border-cyan-400 bg-cyan-950/30 ring-1 ring-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.2)]'
+            : 'border-slate-800/80 bg-[#111620] hover:border-slate-700 hover:bg-[#141a26]'
+        "
+        class="p-2.5 rounded-lg border transition-all cursor-grab active:cursor-grabbing group relative flex flex-col gap-2"
+        :title="`Clique para ver ${item.variants.length} variações ou arraste para o canvas`"
       >
-        <div class="flex items-center justify-between mb-1.5">
+        <!-- Card Header -->
+        <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span
-              class="w-6 h-6 rounded bg-slate-800 flex items-center justify-center text-xs font-mono font-bold"
+              class="w-5 h-5 rounded bg-slate-800 flex items-center justify-center text-xs font-bold"
               :class="item.color"
             >
               {{ item.icon }}
             </span>
-            <div>
-              <div class="text-xs font-bold text-white leading-none font-mono">{{ item.name }}</div>
-              <div class="text-[10px] text-slate-400 mt-0.5">{{ item.desc }}</div>
-            </div>
+            <span class="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">
+              {{ item.name }}
+            </span>
           </div>
-          <button
-            @click="emit('add-node', { type: item.type, variant: item.variants[0]?.id || 'default' })"
-            class="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 rounded text-[11px] font-bold font-mono transition"
-          >
-            + Adicionar
-          </button>
+
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 group-hover:text-cyan-400 transition-colors">
+            {{ item.variants.length }} opções ›
+          </span>
         </div>
 
-        <!-- Variants buttons -->
-        <div class="flex items-center gap-1 pt-1.5 border-t border-slate-800/60 flex-wrap">
-          <span class="text-[9px] uppercase text-slate-500 font-mono mr-1">Variações:</span>
-          <button
-            v-for="v in item.variants"
-            :key="v.id"
-            @click="emit('add-node', { type: item.type, variant: v.id })"
-            class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-[10px] text-slate-300 hover:text-cyan-300 border border-slate-800 transition font-mono"
-          >
-            + {{ v.label }}
-          </button>
+        <!-- Realistic Visual Mini Preview -->
+        <NodeMiniPreview :type="item.type" :variant="item.variants[0]?.id" />
+
+        <!-- Card Footer -->
+        <div class="flex items-center justify-between text-[9px] text-slate-500 font-sans">
+          <span class="truncate pr-2">{{ item.desc }}</span>
+          <span class="text-slate-400 font-mono shrink-0 flex items-center gap-1 group-hover:text-cyan-400">
+            <span>⠿</span> arrastar
+          </span>
         </div>
       </div>
     </div>

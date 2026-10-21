@@ -1,9 +1,10 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import CatalogTab from './CatalogTab.vue';
 import ScenesTab from './ScenesTab.vue';
 import AiDirectorTab from './AiDirectorTab.vue';
 import ExportTab from './ExportTab.vue';
+import VariantFlyout from './VariantFlyout.vue';
 
 defineProps({
   scenes: {
@@ -54,10 +55,31 @@ const emit = defineEmits([
 ]);
 
 const currentTab = ref('nodes');
+const selectedModel = ref(null);
+
+// Reset flyout on tab change
+watch(currentTab, () => {
+  selectedModel.value = null;
+});
+
+// Close flyout on Escape key
+const handleKeyDown = (e) => {
+  if (e.key === 'Escape' && selectedModel.value) {
+    selectedModel.value = null;
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+});
 </script>
 
 <template>
-  <aside class="w-80 bg-[#0c0f15] border-r border-slate-800/90 flex flex-col z-30 shadow-2xl shrink-0 font-mono select-none">
+  <aside class="w-80 bg-[#0c0f15] border-r border-slate-800/90 flex flex-col z-30 shadow-2xl shrink-0 font-mono select-none relative">
     <!-- Brand Header -->
     <div class="h-12 px-3.5 border-b border-slate-800/90 flex items-center justify-between">
       <div class="flex items-center gap-2">
@@ -131,7 +153,9 @@ const currentTab = ref('nodes');
     <!-- Tab 1: Catalog -->
     <CatalogTab
       v-if="currentTab === 'nodes'"
-      @add-node="(payload) => emit('add-node', payload)"
+      :selected-model-type="selectedModel?.type"
+      @select-model="(model) => (selectedModel = selectedModel?.type === model.type ? null : model)"
+      @insert-center="(payload) => emit('add-node', payload)"
     />
 
     <!-- Tab 2: Scenes -->
@@ -164,6 +188,13 @@ const currentTab = ref('nodes');
       :edges="edges"
       :scenes="scenes"
       @open-render-modal="emit('open-render-modal')"
+    />
+
+    <!-- Secondary Variant Flyout Panel (Slides out right next to dock) -->
+    <VariantFlyout
+      :model="selectedModel"
+      @close="selectedModel = null"
+      @insert-center="(payload) => emit('add-node', payload)"
     />
   </aside>
 </template>

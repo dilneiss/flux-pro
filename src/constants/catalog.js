@@ -6,7 +6,7 @@
 export const NODE_CATALOG = [
   {
     type: 'chip',
-    name: '01. Chip PCB / Caminho',
+    name: 'Chip PCB',
     icon: '▣',
     color: 'text-amber-400',
     desc: 'Caminhos, binários e módulos IC',
@@ -19,7 +19,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'terminal',
-    name: '02. Prompt / Agente IA',
+    name: 'Terminal IA',
     icon: '>_',
     color: 'text-cyan-400',
     desc: 'Claude Code, Codex ou Bash CLI',
@@ -32,7 +32,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'finder',
-    name: '03. Finder / Arquivos',
+    name: 'Finder',
     icon: '📁',
     color: 'text-blue-400',
     desc: 'Lista de aplicativos ou árvore',
@@ -45,7 +45,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'media',
-    name: '04. Vídeo / Imagem (Ctrl+V)',
+    name: 'Mídia & Vídeo',
     icon: '▶',
     color: 'text-emerald-400',
     desc: 'Aceita colar print direto dentro',
@@ -58,7 +58,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'code',
-    name: '05. Código / Diff Git',
+    name: 'Código & Diff',
     icon: '{}',
     color: 'text-purple-400',
     desc: 'C++, TypeScript, Assembly ou Diff',
@@ -71,7 +71,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'database',
-    name: '06. Banco de Dados / Vector',
+    name: 'Banco de Dados',
     icon: '🗄',
     color: 'text-indigo-400',
     desc: 'Tabelas SQL, JSON ou Qdrant',
@@ -84,7 +84,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'api',
-    name: '07. API / Webhook REST',
+    name: 'API & Webhook',
     icon: '⇄',
     color: 'text-amber-300',
     desc: 'Endpoints POST, GET e WebSockets',
@@ -97,7 +97,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'mobile',
-    name: '08. Mobile / WhatsApp UI',
+    name: 'Mobile App',
     icon: '📱',
     color: 'text-emerald-300',
     desc: 'Simulador iPhone ou Chat Bot',
@@ -110,7 +110,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'browser',
-    name: '09. Browser / SaaS Window',
+    name: 'Janela SaaS',
     icon: '🌐',
     color: 'text-sky-400',
     desc: 'Janela Chrome com URL e print',
@@ -123,7 +123,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'metric',
-    name: '10. Métrica / Benchmark KPI',
+    name: 'Métrica KPI',
     icon: '📈',
     color: 'text-teal-400',
     desc: 'FPS, Latência, MRR e Progresso',
@@ -136,7 +136,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'queue',
-    name: '11. Fila / RabbitMQ / Redis',
+    name: 'Fila de Jobs',
     icon: '⚡',
     color: 'text-amber-400',
     desc: 'Workers assíncronos e streams',
@@ -149,7 +149,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'hardware',
-    name: '12. Hardware / Stream Deck',
+    name: 'Hardware & Deck',
     icon: '🎛',
     color: 'text-cyan-300',
     desc: 'Botões configuráveis e placas',
@@ -162,7 +162,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'decision',
-    name: '13. Decisão / Roteador IA',
+    name: 'Decisão Lógica',
     icon: '◇',
     color: 'text-purple-400',
     desc: 'Condicional If/Else ou Auth Gate',
@@ -175,7 +175,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'compare',
-    name: '14. Comparativo Antes/Depois',
+    name: 'Comparativo',
     icon: '⚖',
     color: 'text-rose-400',
     desc: 'Legado vs Recompilado Nativo',
@@ -188,7 +188,7 @@ export const NODE_CATALOG = [
   },
   {
     type: 'callout',
-    name: '15. Callout / Evidência',
+    name: 'Nota / Alerta',
     icon: '⚠',
     color: 'text-yellow-400',
     desc: 'Destaque técnico ou observação',

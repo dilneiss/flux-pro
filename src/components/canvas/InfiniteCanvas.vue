@@ -64,10 +64,48 @@ const emit = defineEmits([
   'complete-wire',
   'cancel-wire',
   'drop-file',
+  'drop-node',
   'upload-media'
 ]);
 
 const canvasContainerRef = ref(null);
+const isCanvasDragOver = ref(false);
+
+const onCanvasDragOver = (e) => {
+  if (e.dataTransfer?.types?.includes('application/json')) {
+    e.dataTransfer.dropEffect = 'copy';
+    isCanvasDragOver.value = true;
+  }
+};
+
+const onCanvasDragLeave = () => {
+  isCanvasDragOver.value = false;
+};
+
+const onCanvasDrop = (e) => {
+  isCanvasDragOver.value = false;
+  const raw = e.dataTransfer?.getData('application/json');
+  if (!raw) return;
+
+  try {
+    const data = JSON.parse(raw);
+    if (data.type) {
+      const rect = canvasContainerRef.value?.getBoundingClientRect();
+      const rx = rect ? rect.left : 0;
+      const ry = rect ? rect.top : 0;
+      const worldX = Math.round(((e.clientX - rx - props.camera.x) / props.camera.zoom) / 24) * 24;
+      const worldY = Math.round(((e.clientY - ry - props.camera.y) / props.camera.zoom) / 24) * 24;
+
+      emit('drop-node', {
+        type: data.type,
+        variant: data.variant,
+        coords: { x: worldX, y: worldY }
+      });
+    }
+  } catch {
+    // ignore non-json drops
+  }
+};
 
 const onMouseDown = (e) => {
   if (e.target.closest('.node-card')) return;
@@ -130,7 +168,19 @@ onUnmounted(() => {
     @mousemove="onMouseMove"
     @mouseup="onMouseUp"
     @mouseleave="onMouseUp"
+    @dragover.prevent="onCanvasDragOver"
+    @dragleave="onCanvasDragLeave"
+    @drop.prevent="onCanvasDrop"
   >
+    <!-- Visual Dropzone Guide when dragging from catalog -->
+    <div
+      v-if="isCanvasDragOver"
+      class="absolute inset-0 z-50 pointer-events-none bg-cyan-950/20 border-2 border-dashed border-cyan-400 flex items-center justify-center font-mono text-cyan-300 text-sm backdrop-blur-[1px]"
+    >
+      <span class="bg-slate-900/95 px-4 py-2.5 rounded-lg border border-cyan-500 shadow-2xl flex items-center gap-2">
+        <span class="text-lg">📍</span> Solte aqui para posicionar o bloco neste ponto
+      </span>
+    </div>
     <!-- World Transform Container -->
     <div
       :class="{

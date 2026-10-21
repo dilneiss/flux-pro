@@ -169,8 +169,14 @@ const handleCompleteWire = ({ node, port }) => {
 };
 
 // Add Node from Catalog
-const handleAddNode = ({ type, variant }) => {
-  const newNode = addNode(type, variant, camera.value);
+const handleAddNode = ({ type, variant, coords = null }) => {
+  let spawnCoords = coords;
+  if (!spawnCoords) {
+    const centerX = Math.round((700 - camera.value.x) / camera.value.zoom / 24) * 24;
+    const centerY = Math.round((450 - camera.value.y) / camera.value.zoom / 24) * 24;
+    spawnCoords = { x: centerX, y: centerY };
+  }
+  const newNode = addNode(type, variant, camera.value, spawnCoords);
   if (newNode) selectNode(newNode);
 };
 
@@ -332,6 +338,7 @@ onUnmounted(() => {
         @cancel-wire="cancelWire"
         @drop-file="handleDropFile"
         @upload-media="handleUploadMedia"
+        @drop-node="handleAddNode"
       />
 
       <!-- TMUX Bottom Bar -->
