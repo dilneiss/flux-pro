@@ -78,13 +78,45 @@ export function useGraph(initialNodes = [], initialEdges = []) {
     selectedEdge.value = null;
   };
 
-  const startDragNode = (e, node, camera) => {
+  const startDragNode = (e, node, cameraRef) => {
+    if (e.button !== 0) return; // Only left click
+    if (e.target && e.target.closest('button, input, select, textarea, a, .port-handle')) return;
+    if (e.preventDefault) e.preventDefault();
+
     selectNode(node);
     draggingNode.value = node;
+
+    const camera = cameraRef && typeof cameraRef === 'object' && 'value' in cameraRef
+      ? cameraRef.value
+      : cameraRef || { x: 0, y: 0, zoom: 1 };
+
     dragOffset.value = {
       x: (e.clientX - camera.x) / camera.zoom - node.x,
       y: (e.clientY - camera.y) / camera.zoom - node.y
     };
+
+    const onGlobalMouseMove = (moveEvent) => {
+      if (!draggingNode.value) return;
+      if (moveEvent.buttons === 0) {
+        onGlobalMouseUp();
+        return;
+      }
+      const rawX = (moveEvent.clientX - camera.x) / camera.zoom - dragOffset.value.x;
+      const rawY = (moveEvent.clientY - camera.y) / camera.zoom - dragOffset.value.y;
+      node.x = Math.round(rawX / GRID) * GRID;
+      node.y = Math.round(rawY / GRID) * GRID;
+    };
+
+    const onGlobalMouseUp = () => {
+      window.removeEventListener('mousemove', onGlobalMouseMove);
+      window.removeEventListener('mouseup', onGlobalMouseUp);
+      window.removeEventListener('blur', onGlobalMouseUp);
+      endDragNode();
+    };
+
+    window.addEventListener('mousemove', onGlobalMouseMove, { passive: false });
+    window.addEventListener('mouseup', onGlobalMouseUp);
+    window.addEventListener('blur', onGlobalMouseUp);
   };
 
   const dragNode = (e, camera) => {

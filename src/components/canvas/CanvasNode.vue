@@ -24,6 +24,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'drag-start',
+  'drag-end',
   'select',
   'start-wire',
   'complete-wire',
@@ -40,6 +41,17 @@ const onDropFile = (e) => {
     emit('drop-file', { file, node: props.node });
   }
 };
+const onMouseDown = (e) => {
+  if (e.target.closest('button, input, select, textarea, a, .port-handle')) return;
+  emit('drag-start', e, props.node);
+};
+
+const onMouseUp = () => {
+  if (props.activeWireSourceId && props.activeWireSourceId !== props.node.id) {
+    emit('complete-wire', { node: props.node, port: 'left' });
+  }
+  emit('drag-end');
+};
 </script>
 
 <template>
@@ -51,7 +63,7 @@ const onDropFile = (e) => {
       width: `${node.w || 384}px`
     }"
     :class="[
-      'node-card absolute z-10 rounded bg-[#10141c]/95 transition-all duration-150 select-none cursor-move',
+      'node-card absolute z-10 rounded bg-[#10141c]/95 transition-shadow duration-150 select-none cursor-move',
       node.type === 'chip' ? 'ic-pins' : '',
       isSelected
         ? 'ring-2 ring-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.3)]'
@@ -59,8 +71,8 @@ const onDropFile = (e) => {
         ? 'ring-2 ring-emerald-400 bg-emerald-950/40 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
         : 'border border-slate-700/80 shadow-2xl hover:border-slate-500/80'
     ]"
-    @mousedown.stop="emit('drag-start', $event, node)"
-    @mouseup.stop="emit('complete-wire', { node, port: 'left' })"
+    @mousedown="onMouseDown"
+    @mouseup="onMouseUp"
     @dragenter.prevent="isDragOver = true"
     @dragleave.prevent="isDragOver = false"
     @dragover.prevent="isDragOver = true"

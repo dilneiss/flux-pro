@@ -13,26 +13,41 @@ export function useCanvas() {
    * @param {MouseEvent} e
    */
   const startPan = (e) => {
+    if (e.button !== 0 && e.button !== 1) return;
     isDraggingCanvas.value = true;
     dragStart.value = {
       x: e.clientX - camera.value.x,
       y: e.clientY - camera.value.y
     };
+
+    const onGlobalPanMove = (moveEvent) => {
+      if (!isDraggingCanvas.value) return;
+      if (moveEvent.buttons === 0) {
+        onGlobalPanEnd();
+        return;
+      }
+      camera.value.x = moveEvent.clientX - dragStart.value.x;
+      camera.value.y = moveEvent.clientY - dragStart.value.y;
+    };
+
+    const onGlobalPanEnd = () => {
+      window.removeEventListener('mousemove', onGlobalPanMove);
+      window.removeEventListener('mouseup', onGlobalPanEnd);
+      window.removeEventListener('blur', onGlobalPanEnd);
+      isDraggingCanvas.value = false;
+    };
+
+    window.addEventListener('mousemove', onGlobalPanMove);
+    window.addEventListener('mouseup', onGlobalPanEnd);
+    window.addEventListener('blur', onGlobalPanEnd);
   };
 
-  /**
-   * Handle mouse move while panning canvas
-   * @param {MouseEvent} e
-   */
   const pan = (e) => {
     if (!isDraggingCanvas.value) return;
     camera.value.x = e.clientX - dragStart.value.x;
     camera.value.y = e.clientY - dragStart.value.y;
   };
 
-  /**
-   * Stop panning
-   */
   const endPan = () => {
     isDraggingCanvas.value = false;
   };

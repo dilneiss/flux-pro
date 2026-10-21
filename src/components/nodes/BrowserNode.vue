@@ -20,7 +20,7 @@ defineProps({
       </div>
     </div>
     <div v-if="node.mediaUrl" class="aspect-video bg-black overflow-hidden">
-      <img :src="node.mediaUrl" alt="Screenshot" class="w-full h-full object-cover" />
+      <img :src="node.mediaUrl" alt="Screenshot" draggable="false" class="w-full h-full object-cover pointer-events-none" />
     </div>
     <div class="p-3 bg-[#0e131b]">
       <div class="text-xs font-bold text-white">{{ node.title }}</div>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import CanvasWires from './CanvasWires.vue';
 import CanvasNode from './CanvasNode.vue';
 
@@ -95,8 +95,26 @@ const onMouseMove = (e) => {
 };
 
 const onMouseUp = () => {
-  emit('end-pan');
+  if (props.draggingNode || props.isDraggingCanvas || props.activeWire) {
+    emit('end-pan');
+  }
 };
+
+const onWindowMouseMove = (e) => {
+  if (props.draggingNode || props.isDraggingCanvas || props.activeWire) {
+    onMouseMove(e);
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('mousemove', onWindowMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', onWindowMouseMove);
+  window.removeEventListener('mouseup', onMouseUp);
+});
 </script>
 
 <template>
@@ -142,6 +160,7 @@ const onMouseUp = () => {
         :is-presenting="isPresenting"
         :active-wire-source-id="activeWire?.fromId"
         @drag-start="(e, n) => emit('node-drag-start', e, n)"
+        @drag-end="() => emit('end-pan')"
         @select="(n) => emit('node-select', n)"
         @start-wire="({ node: n, port }) => emit('start-wire', { node: n, port })"
         @complete-wire="({ node: n, port }) => emit('complete-wire', { node: n, port })"

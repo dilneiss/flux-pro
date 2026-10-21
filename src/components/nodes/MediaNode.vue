@@ -27,7 +27,8 @@ const onFileInput = (e) => {
         v-if="node.mediaUrl"
         :src="node.mediaUrl"
         alt="Preview"
-        class="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+        draggable="false"
+        class="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105 pointer-events-none"
       />
       <div v-else class="text-slate-500 text-xs flex flex-col items-center p-4 text-center">
         <span class="text-2xl mb-1">📋</span>

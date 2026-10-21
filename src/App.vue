@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useCanvas } from '@/composables/useCanvas';
 import { useGraph } from '@/composables/useGraph';
 import { useScenes } from '@/composables/useScenes';
@@ -244,6 +244,13 @@ useShortcuts({
   onRedo: redo,
   onPasteImage: handlePasteImage,
   onDuplicate: duplicateSelectedNode
+});
+onMounted(() => {
+  window.addEventListener('mouseup', handlePanEnd);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('mouseup', handlePanEnd);
 });
 </script>
 
