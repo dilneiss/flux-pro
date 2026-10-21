@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { NODE_TEMPLATES, estimateNodeHeight } from '@/constants/catalog';
+import { solveAutoLayout } from '@/utils/autoLayoutSolver';
 
 export const GRID = 24;
 
@@ -218,31 +219,11 @@ export function useGraph(initialNodes = [], initialEdges = []) {
    * Automatic collision-free layout
    * Organizes nodes into a multi-column flow with guaranteed clearances.
    */
-  const autoLayout = (cols = 3) => {
+  const autoLayout = (options = {}) => {
     if (!nodes.value.length) return;
-
-    const colWidths = [440, 500, 440, 440];
-    const startX = 72;
-    const startY = 48;
-    const gapX = 96;
-    const gapY = 64;
-
-    const colHeights = Array(cols).fill(startY);
-
-    nodes.value.forEach((node, idx) => {
-      const col = idx % cols;
-      let x = startX;
-      for (let c = 0; c < col; c++) {
-        x += (colWidths[c] || 440) + gapX;
-      }
-
-      node.x = Math.round(x / GRID) * GRID;
-      node.y = Math.round(colHeights[col] / GRID) * GRID;
-
-      const nodeHeight = estimateNodeHeight(node);
-      colHeights[col] += nodeHeight + gapY;
-    });
-
+    const result = solveAutoLayout(nodes.value, edges.value, options);
+    nodes.value = result.nodes;
+    edges.value = result.edges;
     saveHistory();
   };
 
