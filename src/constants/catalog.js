@@ -308,30 +308,49 @@ export const NODE_TEMPLATES = {
  */
 export function estimateNodeHeight(node) {
   if (!node) return 140;
-  const baseMap = {
-    chip: 112,
-    finder: 215,
-    terminal: 225,
-    media: 280,
-    code: 165,
-    database: 190,
-    api: 170,
-    mobile: 210,
-    browser: 260,
-    metric: 150,
-    queue: 160,
-    hardware: 190,
-    decision: 130,
-    compare: 150,
-    callout: 120
-  };
 
-  const base = baseMap[node.type] || 160;
-  if (node.content && typeof node.content === 'string') {
-    const lines = node.content.split('\n').length;
-    if (lines > 6) {
-      return base + (lines - 6) * 16;
+  if (typeof document !== 'undefined') {
+    const el = document.getElementById(`node-${node.id}`);
+    if (el && el.offsetHeight > 0) {
+      return el.offsetHeight;
     }
   }
-  return base;
+
+  const lines = (node.content && typeof node.content === 'string')
+    ? node.content.split('\n').filter(Boolean).length
+    : 0;
+
+  switch (node.type) {
+    case 'chip':
+      return 88 + (lines > 0 ? lines * 18 : 0);
+    case 'terminal':
+      return 76 + (node.subtitle ? 24 : 0) + Math.max(1, lines) * 18;
+    case 'finder':
+      return 60 + Math.max(2, lines) * 26 + 28;
+    case 'media':
+      return Math.round((node.w || 384) * 9 / 16) + 48;
+    case 'code':
+      return 56 + Math.max(2, lines) * 18 + 24;
+    case 'database':
+      return 56 + Math.max(2, lines) * 24;
+    case 'api':
+      return 56 + Math.max(2, lines) * 18;
+    case 'mobile':
+      return 60 + Math.max(2, lines) * 32;
+    case 'browser':
+      return 60 + (node.mediaUrl ? 180 : 0) + Math.max(1, lines) * 18;
+    case 'metric':
+      return 130;
+    case 'queue':
+      return 140;
+    case 'hardware':
+      return 150;
+    case 'decision':
+      return 110;
+    case 'compare':
+      return 130;
+    case 'callout':
+    default:
+      return 76 + Math.max(1, lines) * 18;
+  }
 }
