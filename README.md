@@ -94,8 +94,10 @@ flux-pro/
 │   ├── manhattan.test.js      # Testes do roteamento ortogonal
 │   ├── autoLayout.test.js     # Testes do algoritmo anti-sobreposição
 │   ├── aiDirector.test.js     # Testes do parser do diretor IA
-│   └── graphStore.test.js     # Testes de mutações do grafo e undo/redo
-├── index.html
+│   ├── graphStore.test.js     # Testes de mutações do grafo e undo/redo
+│   ├── manhattanAllPorts.test.js # Testes das 16 permutações ortogonais
+│   ├── elevenLabs.test.js     # Testes de timestamps e sincronização de voz
+│   └── marketplacePresets.test.js # Validação dos 5 templates comerciais
 ├── vite.config.js
 ├── tailwind.config.js
 └── package.json

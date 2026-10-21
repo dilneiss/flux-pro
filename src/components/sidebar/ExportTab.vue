@@ -19,6 +19,7 @@ const props = defineProps({
     required: true
   }
 });
+const emit = defineEmits(['open-render-modal']);
 
 const exportOutput = ref('');
 const feedbackMsg = ref('');
@@ -107,6 +108,13 @@ const downloadJsonFile = () => {
         class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded transition flex items-center justify-center gap-2"
       >
         <span>⚛️</span> Gerar Componente Remotion (.tsx)
+      </button>
+
+      <button
+        @click="emit('open-render-modal')"
+        class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded transition flex items-center justify-center gap-2 shadow-lg"
+      >
+        <span>🚀</span> Renderizar MP4 4K (Remotion + RabbitMQ)
       </button>
 
       <button

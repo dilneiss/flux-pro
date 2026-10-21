@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { ref } from 'vue';
 import PortHandle from './PortHandle.vue';
 import NodeRenderer from '../nodes/NodeRenderer.vue';
 
@@ -31,7 +31,10 @@ const emit = defineEmits([
   'upload-media'
 ]);
 
+const isDragOver = ref(false);
+
 const onDropFile = (e) => {
+  isDragOver.value = false;
   const file = e.dataTransfer?.files?.[0];
   if (file && file.type.startsWith('image/')) {
     emit('drop-file', { file, node: props.node });
@@ -48,15 +51,19 @@ const onDropFile = (e) => {
       width: `${node.w || 384}px`
     }"
     :class="[
-      'node-card absolute z-10 rounded bg-[#10141c]/95 transition-shadow duration-150 select-none cursor-move',
+      'node-card absolute z-10 rounded bg-[#10141c]/95 transition-all duration-150 select-none cursor-move',
       node.type === 'chip' ? 'ic-pins' : '',
       isSelected
         ? 'ring-2 ring-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.3)]'
+        : isDragOver
+        ? 'ring-2 ring-emerald-400 bg-emerald-950/40 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
         : 'border border-slate-700/80 shadow-2xl hover:border-slate-500/80'
     ]"
     @mousedown.stop="emit('drag-start', $event, node)"
     @mouseup.stop="emit('complete-wire', { node, port: 'left' })"
-    @dragover.prevent
+    @dragenter.prevent="isDragOver = true"
+    @dragleave.prevent="isDragOver = false"
+    @dragover.prevent="isDragOver = true"
     @drop.prevent="onDropFile"
   >
     <!-- 4 Magnetic Port Handles (shown when not in presentation mode) -->
@@ -86,6 +93,15 @@ const onDropFile = (e) => {
         @complete-wire="(p) => emit('complete-wire', { node, port: p })"
       />
     </template>
+
+    <!-- Dropzone indicator when dragging an image over this card -->
+    <div
+      v-if="isDragOver"
+      class="absolute inset-0 z-30 bg-emerald-950/80 border-2 border-dashed border-emerald-400 rounded flex flex-col items-center justify-center text-emerald-300 font-mono text-xs pointer-events-none animate-pulse"
+    >
+      <span class="text-xl mb-1">📥</span>
+      <span>Solte a imagem para injetar neste bloco!</span>
+    </div>
 
     <!-- Top Dashed Group Label (e.g. — no Finder —) -->
     <div

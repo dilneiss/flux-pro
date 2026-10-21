@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import projectsRouter from './routes/projects.js';
 import uploadRouter from './routes/upload.js';
 import aiRouter from './routes/ai.js';
+import renderRouter from './routes/render.js';
+import ttsRouter from './routes/tts.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +35,8 @@ app.get('/api/health', (req, res) => {
 app.use('/api/projects', projectsRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/render', renderRouter);
+app.use('/api/tts', ttsRouter);
 
 app.listen(PORT, () => {
   console.log(`[CircuitFlow Server] API running on http://localhost:${PORT}`);

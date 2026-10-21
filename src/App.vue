@@ -5,6 +5,8 @@ import { useGraph } from '@/composables/useGraph';
 import { useScenes } from '@/composables/useScenes';
 import { useAiDirector } from '@/composables/useAiDirector';
 import { useShortcuts } from '@/composables/useShortcuts';
+import { useScreenRecorder } from '@/composables/useScreenRecorder';
+import { useElevenLabs } from '@/composables/useElevenLabs';
 
 import {
   DEFAULT_META,
@@ -20,9 +22,19 @@ import LeftSidebar from '@/components/sidebar/LeftSidebar.vue';
 import InfiniteCanvas from '@/components/canvas/InfiniteCanvas.vue';
 import RightInspector from '@/components/inspector/RightInspector.vue';
 
+// Feature Modals
+import MarketplaceModal from '@/components/marketplace/MarketplaceModal.vue';
+import AudioSyncModal from '@/components/audio/AudioSyncModal.vue';
+import RenderProgressModal from '@/components/render/RenderProgressModal.vue';
+
 // Project Metadata & Theme
 const presentationMeta = ref({ ...DEFAULT_META });
 const canvasTheme = ref('theme-pcb');
+
+// Modals State
+const isMarketplaceOpen = ref(false);
+const isAudioSyncOpen = ref(false);
+const isRenderOpen = ref(false);
 
 // Core Composables
 const {
@@ -80,6 +92,39 @@ const {
 
 const { aiPromptText, generateGraph } = useAiDirector();
 
+// In-Browser MediaRecorder Screen Recording
+const screenRecorder = useScreenRecorder();
+
+const handleToggleRecordScreen = async () => {
+  if (screenRecorder.isRecording.value) {
+    screenRecorder.stopRecording();
+  } else {
+    await screenRecorder.startRecording();
+  }
+};
+
+// ElevenLabs Audio Synchronization
+const elevenLabs = useElevenLabs();
+elevenLabs.bindAudioToScenes(scenes, (idx) => {
+  activateScene(idx, camera);
+});
+
+// Chroma / PiP Toggle
+const handleToggleChroma = () => {
+  canvasTheme.value =
+    canvasTheme.value === 'theme-pip-alpha' ? 'theme-pcb' : 'theme-pip-alpha';
+};
+
+// Marketplace: Load Preset with 1-click
+const handleLoadPreset = (preset) => {
+  nodes.value = JSON.parse(JSON.stringify(preset.nodes));
+  edges.value = JSON.parse(JSON.stringify(preset.edges));
+  scenes.value = JSON.parse(JSON.stringify(preset.scenes));
+  presentationMeta.value = { ...preset.meta };
+  if (preset.theme) canvasTheme.value = preset.theme;
+  activateScene(0, camera);
+};
+
 // Live Presenter mode: if recording, clicking a node adds camera keyframe
 const handleNodeDragStart = (e, node) => {
   startDragNode(e, node, camera.value);
@@ -92,7 +137,8 @@ const handleNodeDragStart = (e, node) => {
       subtitle: node.subtitle || 'Foco gravado ao vivo',
       x: Math.round(camera.value.x),
       y: Math.round(camera.value.y),
-      zoom: camera.value.zoom
+      zoom: camera.value.zoom,
+      startTime: Number((scenes.value.length * 4.0).toFixed(1))
     });
     currentSceneIndex.value = scenes.value.length - 1;
   }
@@ -223,6 +269,7 @@ useShortcuts({
       @update:ai-prompt-text="(val) => (aiPromptText = val)"
       @update:canvas-theme="(val) => (canvasTheme = val)"
       @generate-graph="handleGenerateGraph"
+      @open-render-modal="isRenderOpen = true"
     />
 
     <!-- Main Workspace -->
@@ -232,9 +279,16 @@ useShortcuts({
         :presentation-meta="presentationMeta"
         :camera-zoom="camera.zoom"
         :is-presenting="isPresenting"
+        :is-recording-screen="screenRecorder.isRecording.value"
+        :recording-duration-formatted="screenRecorder.formatDuration(screenRecorder.recordingDuration.value)"
+        :canvas-theme="canvasTheme"
         @auto-layout="autoLayout"
         @reset-camera="resetCamera"
         @toggle-presenting="togglePresenting"
+        @toggle-record-screen="handleToggleRecordScreen"
+        @open-marketplace="isMarketplaceOpen = true"
+        @open-audio-sync="isAudioSyncOpen = true"
+        @toggle-chroma="handleToggleChroma"
       />
 
       <!-- Scene Header (Narrative HUD) -->
@@ -295,6 +349,27 @@ useShortcuts({
       @focus-node="focusNode"
       @delete-edge="deleteSelectedEdge"
       @close="clearSelection"
+    />
+
+    <!-- Advanced Feature Modals -->
+    <MarketplaceModal
+      :is-open="isMarketplaceOpen"
+      @close="isMarketplaceOpen = false"
+      @load-preset="handleLoadPreset"
+    />
+
+    <AudioSyncModal
+      :is-open="isAudioSyncOpen"
+      :scenes="scenes"
+      :eleven-labs="elevenLabs"
+      @close="isAudioSyncOpen = false"
+      @activate-scene="(idx) => activateScene(idx, camera)"
+    />
+
+    <RenderProgressModal
+      :is-open="isRenderOpen"
+      :project="{ meta: presentationMeta, nodes, edges, scenes }"
+      @close="isRenderOpen = false"
     />
   </div>
 </template>

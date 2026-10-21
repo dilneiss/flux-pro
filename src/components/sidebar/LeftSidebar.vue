@@ -49,7 +49,8 @@ const emit = defineEmits([
   'toggle-live-recording',
   'update:aiPromptText',
   'update:canvasTheme',
-  'generate-graph'
+  'generate-graph',
+  'open-render-modal'
 ]);
 
 const currentTab = ref('nodes');
@@ -162,6 +163,7 @@ const currentTab = ref('nodes');
       :nodes="nodes"
       :edges="edges"
       :scenes="scenes"
+      @open-render-modal="emit('open-render-modal')"
     />
   </aside>
 </template>
