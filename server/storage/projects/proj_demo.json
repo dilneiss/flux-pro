@@ -1,0 +1,22 @@
+{
+  "id": "proj_demo",
+  "meta": {
+    "project": "recompilações-nativas",
+    "slug": "demo-v2"
+  },
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "chip",
+      "title": "Target App"
+    }
+  ],
+  "edges": [],
+  "scenes": [
+    {
+      "name": "cena-01",
+      "title": "Intro"
+    }
+  ],
+  "updatedAt": "2026-10-21T21:14:23.304Z"
+}

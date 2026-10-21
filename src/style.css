@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-canvas: #090b0e;
+  --panel-bg: #0f131a;
+  --border-color: #1e2633;
+}
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background-color: var(--bg-canvas);
+  color: #e2e8f0;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Canvas Themes */
+.theme-pcb {
+  background-color: #090b0e;
+  background-image: 
+    radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 24px 24px, 120px 120px, 120px 120px;
+}
+
+.theme-blueprint {
+  background-color: #071324;
+  background-image: 
+    linear-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.theme-linear {
+  background-color: #050507;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.theme-pip-alpha {
+  background-color: #00ff00;
+  background-image: 
+    linear-gradient(45deg, #0a0a0a 25%, transparent 25%), 
+    linear-gradient(-45deg, #0a0a0a 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #0a0a0a 75%), 
+    linear-gradient(-45deg, transparent 75%, #0a0a0a 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+.theme-cyberpunk {
+  background-color: #0a0612;
+  background-image: 
+    linear-gradient(rgba(236, 72, 153, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Cables Animation */
+@keyframes pulse-flow {
+  to { stroke-dashoffset: -48; }
+}
+
+.cable-animated {
+  stroke-dasharray: 8 16;
+  animation: pulse-flow 1s linear infinite;
+}
+
+/* IC Chip metallic pins */
+.ic-pins::before, .ic-pins::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  width: 6px;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(to bottom, #64748b 0px, #64748b 4px, transparent 4px, transparent 10px);
+}
+.ic-pins::before { left: -7px; }
+.ic-pins::after { right: -7px; }
+
+/* Port handles (Magnetic connection ports) */
+.port-handle {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: #0f172a;
+  border: 2px solid #06b6d4;
+  position: absolute;
+  z-index: 30;
+  cursor: crosshair;
+  opacity: 0.25;
+  transition: all 0.15s ease;
+}
+.node-card:hover .port-handle, .port-handle.active-port {
+  opacity: 1;
+  box-shadow: 0 0 10px #06b6d4;
+}
+.port-handle:hover {
+  transform: scale(1.45);
+  background: #06b6d4;
+  border-color: #ffffff;
+}
+
+.camera-smooth {
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.cursor-blink { animation: blink 1s infinite; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #090b0e; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #334155; }

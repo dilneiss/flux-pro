@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CircuitFlow Studio v2.0 — Visual Presentation Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-canvas: #090b0e;
+      --panel-bg: #0f131a;
+      --border-color: #1e2633;
+    }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background-color: var(--bg-canvas);
+      color: #e2e8f0;
+      overflow: hidden;
+      user-select: none;
+    }
+    /* Temas do Canvas */
+    .theme-pcb {
+      background-color: #090b0e;
+      background-image: 
+        radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+      background-size: 24px 24px, 120px 120px, 120px 120px;
+    }
+    .theme-blueprint {
+      background-color: #071324;
+      background-image: 
+        linear-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.08) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .theme-linear {
+      background-color: #050507;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .theme-pip-alpha {
+      background-color: #00ff00; /* Chroma Key ou Alpha Preview */
+      background-image: linear-gradient(45deg, #0a0a0a 25%, transparent 25%), linear-gradient(-45deg, #0a0a0a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #0a0a0a 75%), linear-gradient(-45deg, transparent 75%, #0a0a0a 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+
+    @keyframes pulse-flow {
+      to { stroke-dashoffset: -48; }
+    }
+    .cable-animated {
+      stroke-dasharray: 8 16;
+      animation: pulse-flow 1s linear infinite;
+    }
+
+    /* Pinos metálicos estilo Chip IC */
+    .ic-pins::before, .ic-pins::after {
+      content: '';
+      position: absolute;
+      top: 12px;
+      bottom: 12px;
+      width: 6px;
+      pointer-events: none;
+      background-image: repeating-linear-gradient(to bottom, #64748b 0px, #64748b 4px, transparent 4px, transparent 10px);
+    }
+    .ic-pins::before { left: -7px; }
+    .ic-pins::after { right: -7px; }
+
+    /* Portas de Conexão (Handles Magnéticos para ligar pontos facilmente) */
+    .port-handle {
+      width: 12px;
+      height: 12px;
+      border-radius: 9999px;
+      background: #0f172a;
+      border: 2px solid #06b6d4;
+      position: absolute;
+      z-index: 30;
+      cursor: crosshair;
+      opacity: 0.25;
+      transition: all 0.15s ease;
+    }
+    .node-card:hover .port-handle, .port-handle.active-port {
+      opacity: 1;
+      box-shadow: 0 0 10px #06b6d4;
+    }
+    .port-handle:hover {
+      transform: scale(1.45);
+      background: #06b6d4;
+      border-color: #ffffff;
+    }
+
+    .camera-smooth {
+      transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    .cursor-blink { animation: blink 1s infinite; }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #090b0e; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+  </style>
+</head>
+<body class="h-screen w-screen flex overflow-hidden">
+
+<div id="app" class="h-full w-full flex overflow-hidden relative">
+
+  <!-- ========================================================================= -->
+  <!-- DOCK LATERAL ESQUERDA (ESTILO CANVAS / FIGMA / N8N)                       -->
+  <!-- ========================================================================= -->
+  <aside v-if="!isPresenting" class="w-80 bg-[#0c0f15] border-r border-slate-800/90 flex flex-col z-30 shadow-2xl">
+    
+    <!-- Brand Header -->
+    <div class="h-12 px-3.5 border-b border-slate-800/90 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#06b6d4]"></span>
+        <span class="font-bold text-xs tracking-wider text-white">CIRCUITFLOW <span class="text-[10px] text-cyan-400 bg-cyan-950 border border-cyan-800 px-1.5 py-0.5 rounded">v2.0</span></span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button @click="autoLayoutNodes" title="Organizar e remover qualquer sobreposição" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2 py-1 rounded border border-slate-700 transition">
+          ✨ Auto-Alinhar
+        </button>
+      </div>
+    </div>
+
+    <!-- Abas da Dock Esquerda -->
+    <div class="grid grid-cols-4 border-b border-slate-800 bg-[#090c10] text-[11px] font-semibold">
+      <button @click="leftTab = 'nodes'" :class="leftTab === 'nodes' ? 'text-cyan-400 border-b-2 border-cyan-400 bg-slate-900/60' : 'text-slate-400 hover:text-slate-200'" class="py-2.5 text-center">+ Blocos (15)</button>
+      <button @click="leftTab = 'scenes'" :class="leftTab === 'scenes' ? 'text-cyan-400 border-b-2 border-cyan-400 bg-slate-900/60' : 'text-slate-400 hover:text-slate-200'" class="py-2.5 text-center">Cenas ({{ scenes.length }})</button>
+      <button @click="leftTab = 'ai'" :class="leftTab === 'ai' ? 'text-cyan-400 border-b-2 border-cyan-400 bg-slate-900/60' : 'text-slate-400 hover:text-slate-200'" class="py-2.5 text-center">IA Director</button>
+      <button @click="leftTab = 'export'" :class="leftTab === 'export' ? 'text-cyan-400 border-b-2 border-cyan-400 bg-slate-900/60' : 'text-slate-400 hover:text-slate-200'" class="py-2.5 text-center">Exportar</button>
+    </div>
+
+    <!-- ABA 1: PALETA DE 15 MODELOS DE COMPONENTES + VARIAÇÕES -->
+    <div v-if="leftTab === 'nodes'" class="flex-1 overflow-y-auto p-3 space-y-3">
+      
+      <!-- Caixa de Dica Rápida de Conexão e Imagem -->
+      <div class="p-2.5 rounded bg-cyan-950/30 border border-cyan-800/50 text-[11px] text-slate-300 space-y-1">
+        <div class="font-bold text-cyan-300 flex items-center gap-1.5">🔌 Como ligar pontos e colar prints:</div>
+        <div>1. Passe o mouse num bloco e <b>arraste a bolinha azul</b> da borda até outro bloco.</div>
+        <div>2. Clique num bloco de <b>Imagem/Mídia</b> e aperte <kbd class="bg-slate-800 px-1 rounded text-cyan-300">Ctrl+V</kbd> para colar uma imagem direto dentro dele.</div>
+      </div>
+
+      <!-- Busca de Componentes -->
+      <input v-model="searchCatalog" placeholder="🔍 Filtrar 15 modelos de blocos..." class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500" />
+
+      <!-- Grid dos 15 Modelos com Seletor Rápido de Variação -->
+      <div class="space-y-2">
+        <div v-for="item in filteredCatalog" :key="item.type"
+             class="p-2.5 rounded border border-slate-800/90 bg-[#11161f] hover:border-slate-700 transition group">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded bg-slate-800 flex items-center justify-center text-xs" :class="item.color">{{ item.icon }}</span>
+              <div>
+                <div class="text-xs font-bold text-white leading-none">{{ item.name }}</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">{{ item.desc }}</div>
+              </div>
+            </div>
+            <button @click="addNodeFromCatalog(item.type, item.variants[0].id)"
+                    class="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 rounded text-[11px] font-bold transition">
+              + Adicionar
+            </button>
+          </div>
+          <!-- Botões de Variações daquele Modelo -->
+          <div class="flex items-center gap-1 pt-1 border-t border-slate-800/60">
+            <span class="text-[9px] uppercase text-slate-500 mr-1">Variações:</span>
+            <button v-for="v in item.variants" :key="v.id"
+                    @click="addNodeFromCatalog(item.type, v.id)"
+                    class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-[10px] text-slate-300 hover:text-cyan-300 border border-slate-800 transition">
+              + {{ v.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 2: ROTEIRO, KEYFRAMES DE CÂMERA & MODO GRAVAÇÃO AO VIVO -->
+    <div v-if="leftTab === 'scenes'" class="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-300">Keyframes da Câmera</span>
+        <button @click="captureKeyframe" class="text-[11px] bg-cyan-500 text-slate-950 font-bold px-2.5 py-1 rounded hover:bg-cyan-400 transition">
+          + Salvar Posição Atual
+        </button>
+      </div>
+
+      <!-- Gravador Ao Vivo (Passo 7 da Arquitetura) -->
+      <div class="p-2.5 rounded border border-amber-500/40 bg-amber-950/20 text-xs space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-amber-300">🔴 Live Presenter Mode</span>
+          <button @click="toggleLiveRecording" :class="isLiveRecording ? 'bg-rose-600 text-white animate-pulse' : 'bg-slate-800 text-amber-300'" class="px-2 py-0.5 rounded text-[11px] font-bold">
+            {{ isLiveRecording ? '⏹ Parar Gravação' : '● Gravar Cliques' }}
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-400 leading-relaxed">
+          Quando ativo, cada bloco que você clicar no canvas vira automaticamente uma nova cena com zoom suave na timeline!
+        </p>
+      </div>
+
+      <div class="space-y-1.5 flex-1 overflow-y-auto">
+        <div v-for="(scene, idx) in scenes" :key="idx"
+             @click="activateScene(idx)"
+             :class="currentSceneIndex === idx ? 'border-cyan-400 bg-cyan-950/30' : 'border-slate-800 bg-slate-900/50 hover:bg-slate-900'"
+             class="p-2.5 rounded border cursor-pointer transition relative group">
+          <div class="flex items-center justify-between text-xs mb-1">
+            <span class="font-bold text-cyan-400">#{{ String(idx + 1).padStart(2, '0') }} {{ scene.name }}</span>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-slate-500">{{ Math.round(scene.zoom * 100) }}%</span>
+              <button v-if="scenes.length > 1" @click.stop="removeScene(idx)" class="text-slate-600 hover:text-rose-400 px-1">×</button>
+            </div>
+          </div>
+          <div class="text-[11px] text-white font-medium truncate">{{ scene.title }}</div>
+          <div class="text-[10px] text-cyan-300/80 truncate">{{ scene.subtitle }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 3: IA DIRECTOR (GERADOR AUTOMÁTICO DE GRAFO POR ROTEIRO) -->
+    <div v-if="leftTab === 'ai'" class="flex-1 overflow-y-auto p-3 space-y-3">
+      <div class="text-xs font-bold text-cyan-400">🤖 Script-to-Graph AI Director</div>
+      <p class="text-[11px] text-slate-400 leading-relaxed">
+        Cole os tópicos do seu vídeo (uma etapa por linha no formato <code class="text-cyan-300">Tipo: Título | Subtítulo</code>) e a ferramenta constrói os nós, conecta os cabos ortogonais e cria os zooms de câmera sozinha.
+      </p>
+      <textarea v-model="aiPromptText" rows="8" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-xs font-mono text-slate-200"></textarea>
+      <button @click="generateGraphFromScript" class="w-full py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded text-xs transition shadow-lg">
+        ⚡ Gerar Grafo + Cenas Automatizadas
+      </button>
+
+      <div class="border-t border-slate-800 pt-3 space-y-2">
+        <div class="text-xs font-bold text-slate-300">🎨 Temas Visuais do Estúdio</div>
+        <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+          <button @click="canvasTheme = 'theme-pcb'" :class="canvasTheme === 'theme-pcb' ? 'border-cyan-400 text-cyan-300' : 'border-slate-800 text-slate-400'" class="p-2 rounded bg-slate-900 border text-left">▣ ViktorKav PCB</button>
+          <button @click="canvasTheme = 'theme-blueprint'" :class="canvasTheme === 'theme-blueprint' ? 'border-cyan-400 text-cyan-300' : 'border-slate-800 text-slate-400'" class="p-2 rounded bg-slate-900 border text-left">📐 Blueprint Eng</button>
+          <button @click="canvasTheme = 'theme-linear'" :class="canvasTheme === 'theme-linear' ? 'border-cyan-400 text-cyan-300' : 'border-slate-800 text-slate-400'" class="p-2 rounded bg-slate-900 border text-left">✨ Linear Minimal</button>
+          <button @click="canvasTheme = 'theme-pip-alpha'" :class="canvasTheme === 'theme-pip-alpha' ? 'border-cyan-400 text-cyan-300' : 'border-slate-800 text-slate-400'" class="p-2 rounded bg-slate-900 border text-left">🟢 Chroma / Alpha</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 4: EXPORTAÇÃO SAAS / REMOTION / JSON -->
+    <div v-if="leftTab === 'export'" class="flex-1 overflow-y-auto p-3 space-y-3 text-xs">
+      <div class="font-bold text-white">Pipeline de Renderização Comercial</div>
+      <button @click="exportSpec('json')" class="w-full py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded transition">
+        📋 Copiar AST JSON Completo
+      </button>
+      <button @click="exportSpec('remotion')" class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded transition">
+        ⚛️ Gerar Componente Remotion (.tsx)
+      </button>
+      <div v-if="exportOutput" class="space-y-1">
+        <div class="text-[10px] text-emerald-400">✔ Código gerado! Copiado para o Clipboard:</div>
+        <pre class="p-2 bg-black border border-slate-800 rounded text-[10px] text-cyan-300 max-h-64 overflow-auto">{{ exportOutput }}</pre>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ========================================================================= -->
+  <!-- VIEWPORT PRINCIPAL (ESTILO CANVAS INFINITO + SHELL TMUX VIKTORKAV)        -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 flex flex-col relative overflow-hidden"
+        @wheel.prevent="onWheel"
+        @mousedown="startPan"
+        @mousemove="onMouseMove"
+        @mouseup="endDrag">
+
+    <!-- BARRA FLUTUANTE DE CONTROLE RÁPIDO DO CANVAS (Topo Direito) -->
+    <div class="absolute top-10 right-4 z-30 flex items-center gap-2">
+      <button @click="autoLayoutNodes" class="px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 border border-slate-700 rounded text-[11px] text-cyan-300 backdrop-blur">
+        ✨ Organizar Nós
+      </button>
+      <button @click="resetCamera" class="px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 border border-slate-700 rounded text-[11px] text-slate-300 backdrop-blur">
+        🔍 Zoom {{ Math.round(camera.zoom * 100) }}% (Reset)
+      </button>
+      <button @click="isPresenting = !isPresenting" :class="isPresenting ? 'bg-amber-500 text-black font-bold' : 'bg-slate-900/90 text-white border border-slate-700'" class="px-3 py-1 rounded text-[11px] backdrop-blur transition">
+        {{ isPresenting ? '⏹ Sair do Modo Gravador' : '🎬 Tela Cheia (Gravar)' }}
+      </button>
+    </div>
+
+    <!-- TOP BAR TMUX (Fiel à referência 06:37) -->
+    <div class="h-7 bg-[#10141d] border-b border-slate-800/90 px-4 flex items-center justify-between text-xs text-slate-400 z-20">
+      <div class="flex items-center gap-2">
+        <span class="text-cyan-400 font-bold">viktorkav</span>
+        <span class="text-slate-600">/</span>
+        <input v-model="presentationMeta.project" class="bg-transparent text-slate-200 focus:outline-none w-36" />
+      </div>
+      <div class="text-slate-500 text-[11px]">tmux</div>
+      <div class="flex items-center gap-4 text-[11px]">
+        <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-amber-500 inline-block"></span> ligação original</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-cyan-400 inline-block"></span> caminho novo</span>
+      </div>
+    </div>
+
+    <!-- CABEÇALHO NARRATIVO DA CENA ATUAL -->
+    <div class="px-8 pt-4 pb-3 border-b border-slate-800/40 bg-[#090b0e]/85 backdrop-blur-md z-10 flex justify-between items-end pointer-events-none">
+      <div>
+        <div class="text-xs text-cyan-400 mb-0.5">~/{{ presentationMeta.slug }}</div>
+        <div class="text-[11px] text-slate-500 mb-1">{{ String(currentSceneIndex + 1).padStart(2, '0') }} / {{ currentScene.name }}</div>
+        <h1 class="text-2xl font-bold text-white tracking-tight leading-tight">{{ currentScene.title }}</h1>
+        <h2 class="text-lg font-bold text-cyan-400 tracking-tight leading-tight">{{ currentScene.subtitle }}</h2>
+      </div>
+    </div>
+
+    <!-- ÁREA DO CANVAS INFINITO -->
+    <div :class="['flex-1 relative overflow-hidden cursor-grab active:cursor-grabbing', canvasTheme]">
+      
+      <div :class="{ 'camera-smooth': !isDraggingCanvas && !draggingNode && !activeWire }"
+           :style="{
+             transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`,
+             transformOrigin: '0 0'
+           }"
+           class="w-[4000px] h-[3000px] relative">
+
+        <!-- =================================================================== -->
+        <!-- CAMADA SVG: TRILHAS ORTOGONAIS + FIO INTERATIVO ARRASTÁVEL          -->
+        <!-- =================================================================== -->
+        <svg class="w-full h-full absolute inset-0 pointer-events-none z-0">
+          <defs>
+            <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+
+          <!-- Conexões Existentes -->
+          <g v-for="edge in edges" :key="edge.id" class="pointer-events-auto cursor-pointer" @click.stop="selectEdge(edge)">
+            <!-- Área invisível mais grossa para facilitar o clique no fio -->
+            <path :d="computeSmartManhattanPath(edge)" stroke="transparent" stroke-width="16" fill="none" />
+
+            <!-- Sombra da Trilha -->
+            <path :d="computeSmartManhattanPath(edge)"
+                  :stroke="edge.color === 'amber' ? '#78350f' : '#164e63'"
+                  stroke-width="3" fill="none" stroke-linejoin="round" />
+
+            <!-- Fio Principal -->
+            <path :d="computeSmartManhattanPath(edge)"
+                  :stroke="edge.color === 'amber' ? '#f59e0b' : '#06b6d4'"
+                  :stroke-width="selectedEdge?.id === edge.id ? '3' : '1.8'"
+                  fill="none" stroke-linejoin="round" />
+
+            <!-- Pulso Elétrico Animado -->
+            <path v-if="edge.animated"
+                  :d="computeSmartManhattanPath(edge)"
+                  :stroke="edge.color === 'amber' ? '#fde68a' : '#a5f3fc'"
+                  stroke-width="2.6" fill="none" class="cable-animated" filter="url(#glow-cyan)" />
+
+            <!-- Pads de Solda nas Pontas -->
+            <circle :cx="getPortCoords(edge.from, edge.fromPort).x" :cy="getPortCoords(edge.from, edge.fromPort).y" r="4"
+                    :fill="edge.color === 'amber' ? '#f59e0b' : '#06b6d4'" />
+            <circle :cx="getPortCoords(edge.to, edge.toPort).x" :cy="getPortCoords(edge.to, edge.toPort).y" r="4"
+                    :fill="edge.color === 'amber' ? '#f59e0b' : '#06b6d4'" />
+
+            <!-- Badge de Rótulo no Meio da Conexão (Clicável) -->
+            <g v-if="edge.label" :transform="`translate(${getEdgeMidpoint(edge).x}, ${getEdgeMidpoint(edge).y})`">
+              <rect x="-48" y="-11" width="96" height="22" rx="4" fill="#0b0e14"
+                    :stroke="edge.color === 'amber' ? '#f59e0b' : '#06b6d4'" stroke-width="1.2" />
+              <text x="0" y="4" text-anchor="middle" fill="#f1f5f9" font-size="10" font-weight="bold">
+                {{ edge.label }}
+              </text>
+            </g>
+          </g>
+
+          <!-- Fio temporário sendo puxado pelo mouse ao vivo! -->
+          <path v-if="activeWire"
+                :d="computeLiveWirePath()"
+                stroke="#22d3ee"
+                stroke-width="2.5"
+                stroke-dasharray="6 6"
+                fill="none" />
+        </svg>
+
+        <!-- =================================================================== -->
+        <!-- CAMADA DE NÓS (TODOS OS 15 MODELOS + VARIAÇÕES + 4 PORTAS)          -->
+        <!-- =================================================================== -->
+        <div v-for="node in nodes" :key="node.id"
+             @mousedown.stop="startDragNode($event, node)"
+             @mouseup.stop="completeWireOnNode(node)"
+             @dragover.prevent
+             @drop.prevent="onDropFileOnNode($event, node)"
+             :style="{ left: node.x + 'px', top: node.y + 'px', width: node.w + 'px' }"
+             :class="[
+               'node-card absolute z-10 rounded bg-[#10141c]/95 transition-shadow duration-150',
+               node.type === 'chip' ? 'ic-pins' : '',
+               selectedNode?.id === node.id ? 'ring-2 ring-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.3)]' : 'border border-slate-700/80 shadow-2xl'
+             ]">
+
+          <!-- 4 PORTAS MAGNÉTICAS (HANDLES) PARA LIGAR UM PONTO AO OUTRO -->
+          <div v-if="!isPresenting"
+               @mousedown.stop="startWire(node, 'top')"
+               @mouseup.stop="completeWire(node, 'top')"
+               title="Arraste para conectar pelo Topo"
+               class="port-handle -top-1.5 left-1/2 -translate-x-1/2"></div>
+          <div v-if="!isPresenting"
+               @mousedown.stop="startWire(node, 'right')"
+               @mouseup.stop="completeWire(node, 'right')"
+               title="Arraste para conectar pela Direita"
+               class="port-handle top-1/2 -right-1.5 -translate-y-1/2"></div>
+          <div v-if="!isPresenting"
+               @mousedown.stop="startWire(node, 'bottom')"
+               @mouseup.stop="completeWire(node, 'bottom')"
+               title="Arraste para conectar por Baixo"
+               class="port-handle -bottom-1.5 left-1/2 -translate-x-1/2"></div>
+          <div v-if="!isPresenting"
+               @mousedown.stop="startWire(node, 'left')"
+               @mouseup.stop="completeWire(node, 'left')"
+               title="Arraste para conectar pela Esquerda"
+               class="port-handle top-1/2 -left-1.5 -translate-y-1/2"></div>
+
+          <!-- Rótulo Tracejado Superior (Ex: -- no Finder --) -->
+          <div v-if="node.groupLabel" class="absolute -top-5 left-0 text-[11px] text-slate-400 font-mono tracking-wide pointer-events-none">
+            — {{ node.groupLabel }} —
+          </div>
+
+          <!-- 01. MODELO: CHIP PCB / CAMINHO -->
+          <div v-if="node.type === 'chip'" class="p-4 border-l-4 rounded"
+               :class="node.variant === 'amber' ? 'border-amber-500' : node.variant === 'emerald' ? 'border-emerald-400' : 'border-cyan-400'">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] uppercase tracking-widest text-slate-400">{{ node.subtitle }}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-cyan-300">{{ node.badge }}</span>
+            </div>
+            <div class="text-base font-bold tracking-tight break-all"
+                 :class="node.variant === 'amber' ? 'text-amber-400' : node.variant === 'emerald' ? 'text-emerald-300' : 'text-cyan-300'">
+              {{ node.title }}
+            </div>
+            <div v-if="node.content" class="text-xs text-slate-400 mt-1.5">{{ node.content }}</div>
+          </div>
+
+          <!-- 02. MODELO: TERMINAL / PROMPT AGENTE -->
+          <div v-else-if="node.type === 'terminal'" class="overflow-hidden rounded">
+            <div class="bg-[#161c26] px-3 py-2 border-b border-slate-800 flex items-center justify-between text-xs">
+              <div v-if="node.variant !== 'bash'" class="flex items-center gap-1.5">
+                <span class="text-slate-400 text-[11px]">agente</span>
+                <span class="bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[10px]">⚙ Codex</span>
+                <span class="bg-amber-950 text-amber-300 border border-amber-700/50 px-1.5 py-0.5 rounded text-[10px]">✴ Claude Code</span>
+              </div>
+              <div v-else class="flex items-center gap-1.5 text-emerald-400 font-bold text-[11px]">
+                <span>$_ zsh</span>
+                <span class="text-slate-500">▸ {{ node.title }}</span>
+              </div>
+              <span class="text-[10px] text-emerald-400">● {{ node.badge }}</span>
+            </div>
+            <div class="p-3.5 bg-[#0b0e13] text-xs leading-relaxed space-y-2.5 font-mono">
+              <div class="text-slate-200 whitespace-pre-line">{{ node.content }}</div>
+              <div v-if="node.subtitle" class="inline-block bg-cyan-950/90 border border-cyan-500/60 text-cyan-300 px-2 py-0.5 rounded text-[11px] break-all">
+                {{ node.subtitle }}<span class="cursor-blink ml-0.5">|</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 03. MODELO: FINDER / ARQUIVOS DO SISTEMA -->
+          <div v-else-if="node.type === 'finder'" class="overflow-hidden rounded">
+            <div class="bg-[#181e29] px-3 py-1.5 border-b border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span class="text-xs text-slate-200 ml-1.5 font-semibold">📁 {{ node.title }}</span>
+              </div>
+              <span class="text-[10px] text-slate-500">{{ node.subtitle }}</span>
+            </div>
+            <div class="p-2 space-y-1 text-xs bg-[#0e1218]">
+              <div v-for="(item, i) in parseList(node.content)" :key="i"
+                   :class="item.active ? 'bg-blue-600/30 border border-blue-500/70 text-white font-semibold' : 'text-slate-400'"
+                   class="px-2.5 py-1 rounded flex items-center justify-between">
+                <span class="truncate">{{ item.active ? '🟣 ' : '📄 ' }}{{ item.name }}</span>
+                <span class="text-[10px] opacity-60">{{ node.variant === 'tree' ? 'src' : 'App' }}</span>
+              </div>
+            </div>
+            <div class="bg-[#0a0c10] px-3 py-1 border-t border-slate-800/80 text-[10px] text-slate-500 truncate">
+              Macintosh HD ▸ Applications ▸ <span class="text-cyan-300">{{ node.badge }}</span>
+            </div>
+          </div>
+
+          <!-- 04. MODELO: VÍDEO / IMAGEM COM CTRL+V DIRETO DENTRO -->
+          <div v-else-if="node.type === 'media'" class="overflow-hidden rounded">
+            <div class="relative bg-black aspect-video flex items-center justify-center overflow-hidden group/img">
+              <img v-if="node.mediaUrl" :src="node.mediaUrl" class="w-full h-full object-cover" />
+              <div v-else class="text-slate-500 text-xs flex flex-col items-center p-4 text-center">
+                <span class="text-2xl mb-1">📋</span>
+                <span>Selecione este card e aperte <b class="text-cyan-300">Ctrl+V</b> para colar uma imagem aqui dentro!</span>
+              </div>
+              <!-- Overlay explicativo ao selecionar -->
+              <div v-if="selectedNode?.id === node.id" class="absolute top-2 right-2 bg-cyan-500 text-slate-950 font-bold px-2 py-0.5 rounded text-[10px] shadow">
+                Pronto para Ctrl+V
+              </div>
+              <div class="absolute bottom-2 left-2 bg-black/85 border border-slate-700 px-2 py-0.5 rounded text-[10px] text-emerald-400">
+                {{ node.badge }}
+              </div>
+            </div>
+            <div class="p-2.5 bg-[#121720] flex items-center justify-between">
+              <div>
+                <div class="text-xs font-bold text-white">{{ node.title }}</div>
+                <div class="text-[11px] text-cyan-400">▶ {{ node.subtitle }}</div>
+              </div>
+              <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-[10px] border border-slate-700">
+                Upload
+                <input type="file" accept="image/*" class="hidden" @change="onUploadImage($event, node)" />
+              </label>
+            </div>
+          </div>
+
+          <!-- 05. MODELO: CÓDIGO / DIFF / DECOMPILER -->
+          <div v-else-if="node.type === 'code'" class="overflow-hidden rounded">
+            <div class="bg-[#161c26] px-3 py-1.5 border-b border-slate-800 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-200">{{ node.title }}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">{{ node.badge }}</span>
+            </div>
+            <pre class="p-3 bg-[#090c10] text-[11px] leading-relaxed overflow-x-auto"
+                 :class="node.variant === 'diff' ? 'text-emerald-300' : node.variant === 'asm' ? 'text-amber-300' : 'text-cyan-300'"><code>{{ node.content }}</code></pre>
+          </div>
+
+          <!-- 06. NOVO MODELO: SCHEMA BANCO DE DADOS (DB / VECTOR) -->
+          <div v-else-if="node.type === 'database'" class="overflow-hidden rounded">
+            <div class="bg-indigo-950/60 px-3 py-1.5 border-b border-indigo-800/60 flex items-center justify-between">
+              <span class="text-xs font-bold text-indigo-300">🗄 {{ node.title }}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-900/60 text-indigo-200">{{ node.badge }}</span>
+            </div>
+            <div class="p-2.5 bg-[#0c0f17] space-y-1 text-[11px]">
+              <div v-for="(row, i) in parseList(node.content)" :key="i" class="flex items-center justify-between py-1 px-2 rounded bg-slate-900/70">
+                <span :class="row.active ? 'text-amber-300 font-bold' : 'text-slate-300'">{{ row.active ? '🔑 ' : '▫ ' }}{{ row.name.split(':')[0] }}</span>
+                <span class="text-[10px] text-indigo-400">{{ row.name.split(':')[1] || 'UUID' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 07. NOVO MODELO: API / WEBHOOK PAYLOAD -->
+          <div v-else-if="node.type === 'api'" class="overflow-hidden rounded">
+            <div class="bg-[#141b24] px-3 py-2 border-b border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                      :class="node.variant === 'get' ? 'bg-emerald-500 text-slate-950' : node.variant === 'ws' ? 'bg-purple-500 text-white' : 'bg-amber-500 text-slate-950'">
+                  {{ node.variant ? node.variant.toUpperCase() : 'POST' }}
+                </span>
+                <span class="text-xs font-bold text-white truncate">{{ node.title }}</span>
+              </div>
+              <span class="text-[10px] text-emerald-400">{{ node.badge }}</span>
+            </div>
+            <pre class="p-3 bg-[#0a0d12] text-[11px] text-amber-200 overflow-x-auto"><code>{{ node.content }}</code></pre>
+          </div>
+
+          <!-- 08. NOVO MODELO: MOBILE / WHATSAPP / APP FRAME -->
+          <div v-else-if="node.type === 'mobile'" class="overflow-hidden rounded-2xl border-2 border-slate-700 bg-[#0b0e14]">
+            <div class="bg-[#121822] px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-400">📱 {{ node.title }}</span>
+              <span class="w-12 h-2.5 bg-black rounded-full"></span>
+              <span class="text-[10px] text-slate-400">{{ node.badge }}</span>
+            </div>
+            <div class="p-3 space-y-2 text-xs">
+              <div v-for="(msg, i) in parseList(node.content)" :key="i"
+                   :class="msg.active ? 'ml-6 bg-emerald-900/50 border border-emerald-700/60 text-emerald-100' : 'mr-6 bg-slate-800 text-slate-200'"
+                   class="p-2 rounded-lg text-[11px]">
+                {{ msg.name }}
+              </div>
+            </div>
+          </div>
+
+          <!-- 09. NOVO MODELO: BROWSER / SAAS UI WINDOW -->
+          <div v-else-if="node.type === 'browser'" class="overflow-hidden rounded">
+            <div class="bg-[#181f2a] px-3 py-1.5 border-b border-slate-800 flex items-center gap-2">
+              <div class="flex gap-1">
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              </div>
+              <div class="flex-1 bg-[#0c1017] border border-slate-700/80 rounded px-2 py-0.5 text-[10px] text-cyan-300 truncate">
+                🔒 {{ node.subtitle }}
+              </div>
+            </div>
+            <div v-if="node.mediaUrl" class="aspect-video bg-black">
+              <img :src="node.mediaUrl" class="w-full h-full object-cover" />
+            </div>
+            <div class="p-3 bg-[#0e131b]">
+              <div class="text-xs font-bold text-white">{{ node.title }}</div>
+              <div class="text-[11px] text-slate-400 mt-1 whitespace-pre-line">{{ node.content }}</div>
+            </div>
+          </div>
+
+          <!-- 10. NOVO MODELO: MÉTRICA / KPI BENCHMARK -->
+          <div v-else-if="node.type === 'metric'" class="p-4 rounded bg-gradient-to-br from-[#111823] to-[#0b0e14]">
+            <div class="flex items-center justify-between text-[10px] text-slate-400 uppercase">
+              <span>{{ node.subtitle }}</span>
+              <span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">{{ node.badge }}</span>
+            </div>
+            <div class="text-3xl font-bold text-white my-1 tracking-tight">{{ node.title }}</div>
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
+              <div class="bg-cyan-400 h-full w-4/5 shadow-[0_0_10px_#06b6d4]"></div>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-1.5">{{ node.content }}</div>
+          </div>
+
+          <!-- 11. NOVO MODELO: FILA / MESSAGE BROKER (RABBITMQ / REDIS) -->
+          <div v-else-if="node.type === 'queue'" class="p-3 rounded bg-[#12161f]">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-amber-400">⚡ {{ node.title }}</span>
+              <span class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">{{ node.badge }}</span>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5 my-2">
+              <div v-for="n in 4" :key="n" class="h-6 rounded bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-[10px] text-amber-300 font-bold">
+                JOB #{{ n }}
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-400">{{ node.content }}</div>
+          </div>
+
+          <!-- 12. NOVO MODELO: HARDWARE / STREAM DECK / GPU -->
+          <div v-else-if="node.type === 'hardware'" class="p-3.5 rounded bg-[#10141d] border border-slate-700">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-cyan-300">🎛 {{ node.title }}</span>
+              <span class="text-[10px] text-slate-400">{{ node.badge }}</span>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5 bg-[#080a0f] p-2 rounded border border-slate-800">
+              <div v-for="(btn, i) in parseList(node.content)" :key="i"
+                   :class="btn.active ? 'bg-cyan-500/30 border-cyan-400 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
+                   class="aspect-square rounded border flex items-center justify-center text-[10px] font-bold text-center p-1">
+                {{ btn.name }}
+              </div>
+            </div>
+          </div>
+
+          <!-- 13. NOVO MODELO: DECISÃO LÓGICA / GATEWAY -->
+          <div v-else-if="node.type === 'decision'" class="p-3.5 rounded bg-[#14121d] border-l-4 border-purple-500">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] uppercase text-purple-300 font-bold">◇ {{ node.subtitle }}</span>
+              <span class="text-[10px] bg-purple-950 text-purple-300 px-1.5 py-0.5 rounded">{{ node.badge }}</span>
+            </div>
+            <div class="text-sm font-bold text-white mt-1">{{ node.title }}</div>
+            <div class="text-[11px] text-slate-400 mt-1 whitespace-pre-line">{{ node.content }}</div>
+          </div>
+
+          <!-- 14. NOVO MODELO: COMPARATIVO ANTES / DEPOIS -->
+          <div v-else-if="node.type === 'compare'" class="overflow-hidden rounded">
+            <div class="bg-[#161b24] px-3 py-1.5 border-b border-slate-800 flex justify-between items-center">
+              <span class="text-xs font-bold text-white">{{ node.title }}</span>
+              <span class="text-[10px] text-cyan-400">{{ node.badge }}</span>
+            </div>
+            <div class="grid grid-cols-2 divide-x divide-slate-800 text-xs bg-[#0c0f15]">
+              <div class="p-2.5">
+                <div class="text-[10px] text-amber-400 font-bold uppercase mb-1">❌ Original</div>
+                <div class="text-[11px] text-slate-400 whitespace-pre-line">{{ node.content.split('|')[0] }}</div>
+              </div>
+              <div class="p-2.5">
+                <div class="text-[10px] text-cyan-400 font-bold uppercase mb-1">✔ Caminho Novo</div>
+                <div class="text-[11px] text-slate-200 whitespace-pre-line">{{ node.content.split('|')[1] || 'Nativo 60fps' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 15. NOVO MODELO: CALLOUT / NOTA DE EVIDÊNCIA -->
+          <div v-else class="p-3.5 rounded bg-amber-950/20 border border-amber-500/50">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-amber-300">⚠ {{ node.title }}</span>
+              <span class="text-[10px] text-amber-400">{{ node.badge }}</span>
+            </div>
+            <div class="text-xs text-slate-200 leading-relaxed whitespace-pre-line">{{ node.content }}</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM BAR TMUX (Navegação + Status) -->
+    <div class="h-7 bg-[#10141d] border-t border-slate-800/90 px-3 flex items-center justify-between text-xs z-20">
+      <div class="flex items-center gap-3">
+        <span class="bg-cyan-400 text-slate-950 font-bold px-1.5 py-0.5 rounded-sm text-[11px]">[rep]</span>
+        <span class="text-slate-300 font-semibold">0: {{ presentationMeta.slug }}*</span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button @click="prevScene" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-200 text-[11px]">◀ Anterior</button>
+        <span class="text-slate-400 text-[11px]">Keyframe {{ currentSceneIndex + 1 }} / {{ scenes.length }}</span>
+        <button @click="nextScene" class="px-2 py-0.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded text-[11px]">Próximo ▶</button>
+      </div>
+
+      <div class="text-slate-500 text-[11px]">{{ nodes.length }} nós | {{ edges.length }} conexões</div>
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- DRAWER DIREITO CONTEXTUAL (SÓ APARECE QUANDO SELECIONA NÓ OU FIO)         -->
+  <!-- ========================================================================= -->
+  <aside v-if="!isPresenting && (selectedNode || selectedEdge)" class="w-72 bg-[#0c0f15] border-l border-slate-800/90 p-3.5 flex flex-col gap-3 overflow-y-auto z-30 shadow-2xl">
+    
+    <!-- Inspetor de Nó -->
+    <div v-if="selectedNode" class="space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <span class="text-xs font-bold uppercase text-cyan-400">Propriedades do Bloco</span>
+        <button @click="deleteSelectedNode" class="text-xs text-rose-400 hover:text-rose-300">🗑 Excluir</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-1">Modelo (15)</label>
+          <select v-model="selectedNode.type" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+            <option v-for="c in catalog" :key="c.type" :value="c.type">{{ c.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-1">Variação Visual</label>
+          <input v-model="selectedNode.variant" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-cyan-300" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Rótulo Tracejado Acima (Grupo)</label>
+        <input v-model="selectedNode.groupLabel" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs" />
+      </div>
+
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Título Principal</label>
+        <input v-model="selectedNode.title" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs" />
+      </div>
+
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Subtítulo / Caminho / URL</label>
+        <input v-model="selectedNode.subtitle" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs" />
+      </div>
+
+      <div v-if="['media', 'browser'].includes(selectedNode.type)" class="p-2 rounded bg-cyan-950/30 border border-cyan-800/50 space-y-1.5">
+        <label class="text-[10px] text-cyan-300 font-bold block">🖼 Imagem Interna (Aceita Ctrl+V)</label>
+        <input v-model="selectedNode.mediaUrl" placeholder="Cole print com Ctrl+V ou URL..." class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs" />
+      </div>
+
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Conteúdo / Linhas / Código</label>
+        <textarea v-model="selectedNode.content" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-xs font-mono"></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-1">Largura (px)</label>
+          <input type="number" step="24" v-model.number="selectedNode.w" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs" />
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-1">Badge Status</label>
+          <input v-model="selectedNode.badge" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs" />
+        </div>
+      </div>
+
+      <button @click="focusNode(selectedNode)" class="w-full py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 rounded text-xs text-cyan-300 font-bold">
+        🎯 Focar Câmera Neste Bloco
+      </button>
+    </div>
+
+    <!-- Inspetor de Conexão (Fio) -->
+    <div v-if="selectedEdge" class="space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <span class="text-xs font-bold uppercase text-amber-400">Editar Conexão (Trilha)</span>
+        <button @click="deleteSelectedEdge" class="text-xs text-rose-400 hover:text-rose-300">🗑 Remover Fio</button>
+      </div>
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Texto no Meio da Linha</label>
+        <input v-model="selectedEdge.label" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs" />
+      </div>
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Cor da Ligação</label>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button @click="selectedEdge.color = 'amber'" :class="selectedEdge.color === 'amber' ? 'ring-2 ring-amber-400' : ''" class="py-1.5 bg-amber-950 text-amber-300 rounded">Laranja (Original)</button>
+          <button @click="selectedEdge.color = 'cyan'" :class="selectedEdge.color === 'cyan' ? 'ring-2 ring-cyan-400' : ''" class="py-1.5 bg-cyan-950 text-cyan-300 rounded">Ciano (Novo)</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-1">Porta Saída</label>
+          <select v-model="selectedEdge.fromPort" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
+            <option value="top">Topo</option><option value="right">Direita</option><option value="bottom">Baixo</option><option value="left">Esquerda</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-1">Porta Entrada</label>
+          <select v-model="selectedEdge.toPort" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
+            <option value="top">Topo</option><option value="right">Direita</option><option value="bottom">Baixo</option><option value="left">Esquerda</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const GRID = 24;
+    const leftTab = ref('nodes');
+    const searchCatalog = ref('');
+    const canvasTheme = ref('theme-pcb');
+    const isPresenting = ref(false);
+    const isLiveRecording = ref(false);
+    const currentSceneIndex = ref(0);
+    const selectedNode = ref(null);
+    const selectedEdge = ref(null);
+    const exportOutput = ref('');
+
+    // Fio sendo puxado ao vivo pelas bolinhas das bordas
+    const activeWire = ref(null); // { fromId, fromPort, mouseX, mouseY }
+
+    const presentationMeta = ref({ project: 'recompilações', slug: 'rea' });
+    const camera = ref({ x: 48, y: 24, zoom: 0.9 });
+    const isDraggingCanvas = ref(false);
+    const draggingNode = ref(null);
+    const dragOffset = ref({ x: 0, y: 0 });
+
+    // CATÁLOGO DOS 15 MODELOS COM 3 VARIAÇÕES CADA
+    const catalog = ref([
+      { type: 'chip', name: '01. Chip PCB / Caminho', icon: '▣', color: 'text-amber-400', desc: 'Caminhos, binários e módulos IC', variants: [{ id: 'amber', label: 'Original' }, { id: 'cyan', label: 'Ciano' }, { id: 'emerald', label: 'Kernel' }] },
+      { type: 'terminal', name: '02. Prompt / Agente IA', icon: '>_', color: 'text-cyan-400', desc: 'Claude Code, Codex ou Bash CLI', variants: [{ id: 'claude', label: 'Agente IA' }, { id: 'bash', label: 'Bash ZSH' }, { id: 'logs', label: 'Logs' }] },
+      { type: 'finder', name: '03. Finder / Arquivos', icon: '📁', color: 'text-blue-400', desc: 'Lista de aplicativos ou árvore', variants: [{ id: 'macos', label: 'Finder' }, { id: 'tree', label: 'VSCode Tree' }, { id: 'archive', label: 'Binários' }] },
+      { type: 'media', name: '04. Vídeo / Imagem (Ctrl+V)', icon: '▶', color: 'text-emerald-400', desc: 'Aceita colar print direto dentro', variants: [{ id: 'cinema', label: '16:9 Vídeo' }, { id: 'pip', label: 'Captura' }, { id: 'split', label: 'Demo' }] },
+      { type: 'code', name: '05. Código / Diff Git', icon: '{}', color: 'text-purple-400', desc: 'C++, TypeScript, Assembly ou Diff', variants: [{ id: 'code', label: 'Código' }, { id: 'diff', label: 'Git Diff' }, { id: 'asm', label: 'Assembly' }] },
+      { type: 'database', name: '06. Banco de Dados / Vector', icon: '🗄', color: 'text-indigo-400', desc: 'Tabelas SQL, JSON ou Qdrant', variants: [{ id: 'postgres', label: 'SQL Table' }, { id: 'vector', label: 'Vector DB' }, { id: 'json', label: 'Documento' }] },
+      { type: 'api', name: '07. API / Webhook REST', icon: '⇄', color: 'text-amber-300', desc: 'Endpoints POST, GET e WebSockets', variants: [{ id: 'post', label: 'POST JSON' }, { id: 'get', label: 'GET 200' }, { id: 'ws', label: 'WebSocket' }] },
+      { type: 'mobile', name: '08. Mobile / WhatsApp UI', icon: '📱', color: 'text-emerald-300', desc: 'Simulador iPhone ou Chat Bot', variants: [{ id: 'whatsapp', label: 'WhatsApp' }, { id: 'iphone', label: 'App iOS' }, { id: 'push', label: 'Push Alert' }] },
+      { type: 'browser', name: '09. Browser / SaaS Window', icon: '🌐', color: 'text-sky-400', desc: 'Janela Chrome com URL e print', variants: [{ id: 'chrome', label: 'Chrome UI' }, { id: 'dashboard', label: 'SaaS Painel' }, { id: 'ext', label: 'Extensão' }] },
+      { type: 'metric', name: '10. Métrica / Benchmark KPI', icon: '📈', color: 'text-teal-400', desc: 'FPS, Latência, MRR e Progresso', variants: [{ id: 'fps', label: '60 FPS' }, { id: 'latency', label: 'Latência' }, { id: 'roi', label: 'Receita' }] },
+      { type: 'queue', name: '11. Fila / RabbitMQ / Redis', icon: '⚡', color: 'text-amber-400', desc: 'Workers assíncronos e streams', variants: [{ id: 'rabbitmq', label: 'RabbitMQ' }, { id: 'redis', label: 'Redis Queue' }, { id: 'kafka', label: 'Stream' }] },
+      { type: 'hardware', name: '12. Hardware / Stream Deck', icon: '🎛', color: 'text-cyan-300', desc: 'Botões configuráveis e placas', variants: [{ id: 'deck', label: 'Stream Deck' }, { id: 'gpu', label: 'GPU Cores' }, { id: 'prompter', label: 'Prompter' }] },
+      { type: 'decision', name: '13. Decisão / Roteador IA', icon: '◇', color: 'text-purple-400', desc: 'Condicional If/Else ou Auth Gate', variants: [{ id: 'if', label: 'If / Else' }, { id: 'router', label: 'OmniRoute' }, { id: 'auth', label: 'Guard' }] },
+      { type: 'compare', name: '14. Comparativo Antes/Depois', icon: '⚖', color: 'text-rose-400', desc: 'Legado vs Recompilado Nativo', variants: [{ id: 'versus', label: 'Lado a Lado' }, { id: 'mig', label: 'Migração' }, { id: 'bench', label: ' Ganho' }] },
+      { type: 'callout', name: '15. Callout / Evidência', icon: '⚠', color: 'text-yellow-400', desc: 'Destaque técnico ou observação', variants: [{ id: 'warn', label: 'Alerta' }, { id: 'proof', label: 'Evidência' }, { id: 'note', label: 'Nota' }] }
+    ]);
+
+    const filteredCatalog = computed(() => {
+      if (!searchCatalog.value) return catalog.value;
+      const q = searchCatalog.value.toLowerCase();
+      return catalog.value.filter(c => c.name.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q));
+    });
+
+    // NÓS INICIAIS: CORRIGIDOS E SEM NENHUMA SOBREPOSIÇÃO!
+    const nodes = ref([
+      {
+        id: 'n1', type: 'chip', variant: 'amber', groupLabel: 'caminho',
+        title: '/Applications/Elgato Camera Hub.app', subtitle: 'ENDEREÇO DO APLICATIVO NO MAC', badge: 'alvo',
+        x: 192, y: 48, w: 624
+      },
+      {
+        id: 'n2', type: 'finder', variant: 'macos', groupLabel: 'no Finder',
+        title: 'Applications', subtitle: 'pasta aplicativos', badge: 'Elgato Camera Hub',
+        content: 'DisplayLink Manager\nElvCapture\n*Elgato Camera Hub\nElgato Stream Deck',
+        x: 48, y: 240, w: 384
+      },
+      {
+        id: 'n3', type: 'terminal', variant: 'claude', groupLabel: 'conversa do agente',
+        title: 'Prompt de Investigação', subtitle: '/Applications/Elgato Camera Hub.app', badge: 'REA conectado',
+        content: '> Use o REA pra analisar o Camera Hub nesse Mac.\n\nEu quero entender como ele controla a rolagem dos textos dos meus roteiros.\n\nMostre os arquivos ou trechos de código que sustentam a resposta.',
+        x: 504, y: 240, w: 480
+      },
+      {
+        id: 'n5', type: 'media', variant: 'cinema', groupLabel: 'resultado em execução',
+        title: 'Zelda: The Wind Waker HD', subtitle: 'Recompilação Estática PowerPC ▸ C++', badge: '[ok] 60 fps nativo',
+        mediaUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
+        x: 1080, y: 48, w: 384
+      },
+      {
+        id: 'n4', type: 'code', variant: 'code', groupLabel: 'versão própria',
+        title: 'prompter_controller.ts', badge: '[ok] testado',
+        content: 'while (playing) {\n  const dt = clock.tick();\n  prompter.scrollBy(0, speed * dt);\n}',
+        x: 1080, y: 384, w: 384 // Posicionado abaixo de n5 (y: 384) evitando qualquer colisão!
+      }
+    ]);
+
+    // CONEXÕES INICIAIS COM PORTAS EXPLÍCITAS (top, right, bottom, left)
+    const edges = ref([
+      { id: 'e1', from: 'n1', fromPort: 'bottom', to: 'n2', toPort: 'top', label: 'pasta local', color: 'amber', animated: true },
+      { id: 'e2', from: 'n1', fromPort: 'bottom', to: 'n3', toPort: 'top', label: 'o Camera Hub', color: 'cyan', animated: true },
+      { id: 'e3', from: 'n2', fromPort: 'right', to: 'n3', toPort: 'left', label: 'copia caminho', color: 'cyan', animated: true },
+      { id: 'e4', from: 'n3', fromPort: 'right', to: 'n4', toPort: 'left', label: 'MCP ▸ REA', color: 'cyan', animated: true },
+      { id: 'e5', from: 'n5', fromPort: 'bottom', to: 'n4', toPort: 'top', label: 'runtime', color: 'amber', animated: true }
+    ]);
+
+    const scenes = ref([
+      { name: 'caminho do aplicativo', title: 'informe o caminho do aplicativo', subtitle: 'o endereço dele no computador', x: 48, y: 24, zoom: 0.9 },
+      { name: 'foco no finder', title: 'localize o binário no sistema', subtitle: 'pasta Applications do macOS', x: 140, y: -120, zoom: 1.2 },
+      { name: 'pedido ao agente', title: 'o pedido de investigação com evidência', subtitle: 'colando o caminho no Claude Code / Codex', x: -320, y: -120, zoom: 1.15 },
+      { name: 'execução e código', title: 'do binário fechado para uma versão própria', subtitle: 'resultado rodando a 60fps sem sobreposição', x: -760, y: -20, zoom: 1.0 }
+    ]);
+
+    const aiPromptText = ref(
+`chip: /Applications/Photoshop.app | Binário Proprietário Original
+terminal: Engenharia Reversa via REA | Investigando máscaras e camadas PSD
+code: artcraft_psd_parser.rs | Reimplementação limpa em Rust + WebGPU
+media: ArtCraft Studio Aberto | Compatível com arquivos PSD a 60fps`
+    );
+
+    const currentScene = computed(() => scenes.value[currentSceneIndex.value] || scenes.value[0]);
+
+    const parseList = (text) => {
+      if (!text) return [];
+      return text.split('\n').map(line => ({
+        name: line.replace(/^\*/, '').trim(),
+        active: line.trim().startsWith('*')
+      }));
+    };
+
+    // Estimativa da altura real de cada nó para posicionar as portas e evitar colisões
+    const estimateNodeHeight = (node) => {
+      if (!node) return 140;
+      const map = { chip: 112, finder: 215, terminal: 225, media: 280, code: 165, database: 190, api: 170, mobile: 210, browser: 260, metric: 150, queue: 160, hardware: 190, decision: 130, compare: 150, callout: 120 };
+      return map[node.type] || 160;
+    };
+
+    // Calcula a coordenada exata (x, y) de cada uma das 4 portas do nó
+    const getPortCoords = (nodeId, port = 'right') => {
+      const n = nodes.value.find(item => item.id === nodeId);
+      if (!n) return { x: 0, y: 0 };
+      const h = estimateNodeHeight(n);
+      if (port === 'top') return { x: n.x + n.w / 2, y: n.y };
+      if (port === 'bottom') return { x: n.x + n.w / 2, y: n.y + h };
+      if (port === 'left') return { x: n.x, y: n.y + h / 2 };
+      return { x: n.x + n.w, y: n.y + h / 2 }; // right
+    };
+
+    // ROTEAMENTO ORTOGONAL INTELIGENTE (MANHATTAN ROUTING POR PORTA)
+    const computeSmartManhattanPath = (edge) => {
+      const p1 = getPortCoords(edge.from, edge.fromPort || 'right');
+      const p2 = getPortCoords(edge.to, edge.toPort || 'left');
+
+      if ((edge.fromPort === 'bottom' && edge.toPort === 'top') || (edge.fromPort === 'top' && edge.toPort === 'bottom')) {
+        const midY = (p1.y + p2.y) / 2;
+        return `M ${p1.x} ${p1.y} L ${p1.x} ${midY} L ${p2.x} ${midY} L ${p2.x} ${p2.y}`;
+      }
+      const midX = (p1.x + p2.x) / 2;
+      return `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${p2.y} L ${p2.x} ${p2.y}`;
+    };
+
+    const getEdgeMidpoint = (edge) => {
+      const p1 = getPortCoords(edge.from, edge.fromPort || 'right');
+      const p2 = getPortCoords(edge.to, edge.toPort || 'left');
+      return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    };
+
+    // Ligar pontos arrastando pelas bolinhas (Portas)
+    const startWire = (node, port) => {
+      const coords = getPortCoords(node.id, port);
+      activeWire.value = { fromId: node.id, fromPort: port, mouseX: coords.x, mouseY: coords.y };
+    };
+
+    const computeLiveWirePath = () => {
+      if (!activeWire.value) return '';
+      const p1 = getPortCoords(activeWire.value.fromId, activeWire.value.fromPort);
+      const p2 = { x: activeWire.value.mouseX, y: activeWire.value.mouseY };
+      const midX = (p1.x + p2.x) / 2;
+      return `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${p2.y} L ${p2.x} ${p2.y}`;
+    };
+
+    const completeWire = (targetNode, targetPort) => {
+      if (!activeWire.value || activeWire.value.fromId === targetNode.id) {
+        activeWire.value = null;
+        return;
+      }
+      edges.value.push({
+        id: 'e' + Date.now(),
+        from: activeWire.value.fromId,
+        fromPort: activeWire.value.fromPort,
+        to: targetNode.id,
+        toPort: targetPort,
+        label: 'fluxo',
+        color: 'cyan',
+        animated: true
+      });
+      activeWire.value = null;
+    };
+
+    const completeWireOnNode = (targetNode) => {
+      if (activeWire.value && activeWire.value.fromId !== targetNode.id) {
+        completeWire(targetNode, 'left');
+      }
+    };
+
+    // Adicionar qualquer um dos 15 Modelos com Variação sem sobrepor outros nós
+    const addNodeFromCatalog = (type, variant) => {
+      const id = 'n' + Date.now();
+      const templates = {
+        chip: { title: '/usr/local/bin/target.app', subtitle: 'BINÁRIO DE SISTEMA', badge: variant, w: 432, content: '' },
+        terminal: { title: 'Agente IA', subtitle: 'npx rea-agents@latest inspect', badge: 'MCP ativo', w: 456, content: '> Analise as funções exportadas e reconstrua o módulo de áudio.' },
+        finder: { title: 'Workspace', subtitle: 'arquivos', badge: 'src/core', w: 360, content: 'main_loop.cpp\n*audio_driver.rs\nshader_cache.bin' },
+        media: { title: 'Demonstração Visual', subtitle: 'Aperte Ctrl+V para colar print', badge: '[ok] 60 fps', w: 384, mediaUrl: '' },
+        code: { title: 'patch_engine.rs', badge: variant, w: 384, content: '+ fn bypass_drm_check() -> bool {\n+   return true;\n+ }' },
+        database: { title: 'tenants_schema', badge: variant, w: 336, content: '*id: UUID PK\ncompany_name: VARCHAR\nvector_embedding: FLOAT[1536]' },
+        api: { title: '/v1/video/render', badge: '200 OK', w: 360, content: '{\n  "fps": 60,\n  "resolution": "4K",\n  "status": "queued"\n}' },
+        mobile: { title: 'Agente WhatsApp', badge: 'Online', w: 312, content: 'Olá! Como posso gerar meu vídeo?\n*Envie o roteiro e eu crio o grafo automático!' },
+        browser: { title: 'Painel SaaS Multi-Tenant', subtitle: 'app.circuitflow.io/studio', badge: 'v2.0', w: 384, content: 'Renderização em nuvem ativa com workers paralelos.' },
+        metric: { title: '60.0 FPS', subtitle: 'PERFORMANCE NATIVA', badge: '+142%', w: 288, content: 'Tempo de quadro estabilizado em 16.6ms' },
+        queue: { title: 'RabbitMQ Render Exchange', badge: '4 workers', w: 360, content: 'Distribuindo cenas para containers Remotion FFmpeg' },
+        hardware: { title: 'Elgato Stream Deck XL', badge: 'HID USB', w: 336, content: '*Play\nPause\n*Cap +1\nVel +' },
+        decision: { title: 'Verificar Assinatura / Caminho', subtitle: 'ROTEADOR LÓGICO', badge: variant, w: 336, content: 'Se encontrar evidência no binário ▸ Gerar prova de conceito' },
+        compare: { title: 'Comparativo de Arquitetura', badge: 'Benchmark', w: 408, content: '20 minutos compilando\nPreso ao hardware | Instantâneo no Canvas\nMultiplataforma 60fps' },
+        callout: { title: 'Nota de Engenharia', badge: 'Importante', w: 336, content: 'Nenhuma linha de código proprietário foi copiada durante a observação.' }
+      };
+
+      const tpl = templates[type] || templates.chip;
+      // Encontra posição livre sem colidir
+      const baseX = Math.round((160 - camera.value.x) / camera.value.zoom / GRID) * GRID;
+      const baseY = Math.round((140 - camera.value.y) / camera.value.zoom / GRID) * GRID;
+
+      const newNode = {
+        id, type, variant,
+        groupLabel: `${type} (${variant})`,
+        x: baseX + (nodes.value.length % 3) * 72,
+        y: baseY + (nodes.value.length % 3) * 48,
+        ...tpl
+      };
+      nodes.value.push(newNode);
+      selectedNode.value = newNode;
+      selectedEdge.value = null;
+    };
+
+    // ALGORITMO DE AUTO-LAYOUT ANTI-SOBREPOSIÇÃO (Resolve qualquer colisão com 1 clique)
+    const autoLayoutNodes = () => {
+      const cols = 3;
+      const colWidths = [420, 500, 420];
+      const startX = 72;
+      const startY = 48;
+      const gapX = 96;
+      const gapY = 64;
+
+      let colHeights = [startY, startY, startY];
+
+      nodes.value.forEach((node, idx) => {
+        const col = idx % cols;
+        let x = startX;
+        for (let c = 0; c < col; c++) x += colWidths[c] + gapX;
+
+        node.x = Math.round(x / GRID) * GRID;
+        node.y = Math.round(colHeights[col] / GRID) * GRID;
+        colHeights[col] += estimateNodeHeight(node) + gapY;
+      });
+    };
+
+    // IA DIRECTOR: Gera Grafo Completo + Conexões + Cenas a partir do Roteiro
+    const generateGraphFromScript = () => {
+      const lines = aiPromptText.value.split('\n').map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return;
+
+      nodes.value = [];
+      edges.value = [];
+      scenes.value = [];
+
+      lines.forEach((line, idx) => {
+        const [left, right] = line.split('|').map(s => s?.trim() || '');
+        const [typeRaw, titleRaw] = left.includes(':') ? left.split(':').map(s => s.trim()) : ['chip', left];
+        const validType = catalog.value.some(c => c.type === typeRaw.toLowerCase()) ? typeRaw.toLowerCase() : 'chip';
+
+        const id = 'n_ai_' + idx;
+        const col = idx % 2;
+        const row = Math.floor(idx / 2);
+        const x = 96 + col * 552;
+        const y = 72 + row * 312;
+
+        nodes.value.push({
+          id,
+          type: validType,
+          variant: idx === 0 ? 'amber' : 'cyan',
+          groupLabel: `etapa 0${idx + 1}`,
+          title: titleRaw || `Bloco ${idx + 1}`,
+          subtitle: right || 'Fluxo automatizado',
+          badge: '[ok]',
+          content: right || 'Gerado pelo IA Director',
+          mediaUrl: validType === 'media' ? 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80' : '',
+          x, y, w: 432
+        });
+
+        if (idx > 0) {
+          edges.value.push({
+            id: 'e_ai_' + idx,
+            from: 'n_ai_' + (idx - 1),
+            fromPort: col === 1 ? 'right' : 'bottom',
+            to: id,
+            toPort: col === 1 ? 'left' : 'top',
+            label: `passo ${idx}`,
+            color: idx === 1 ? 'amber' : 'cyan',
+            animated: true
+          });
+        }
+
+        scenes.value.push({
+          name: `cena-0${idx + 1}`,
+          title: titleRaw || `Etapa ${idx + 1}`,
+          subtitle: right || 'Explicação visual conectada',
+          x: -x + 260,
+          y: -y + 140,
+          zoom: 1.15
+        });
+      });
+
+      currentSceneIndex.value = 0;
+      activateScene(0);
+    };
+
+    // Interação de Mouse no Canvas
+    const startDragNode = (e, node) => {
+      selectedNode.value = node;
+      selectedEdge.value = null;
+      draggingNode.value = node;
+      dragOffset.value = {
+        x: (e.clientX - camera.value.x) / camera.value.zoom - node.x,
+        y: (e.clientY - camera.value.y) / camera.value.zoom - node.y
+      };
+
+      // Se o Modo Gravação Ao Vivo estiver ligado, clicar num nó cria um Keyframe de câmera!
+      if (isLiveRecording.value) {
+        focusNode(node);
+        scenes.value.push({
+          name: node.groupLabel || node.type,
+          title: node.title,
+          subtitle: node.subtitle || 'Foco gravado ao vivo',
+          x: Math.round(camera.value.x),
+          y: Math.round(camera.value.y),
+          zoom: camera.value.zoom
+        });
+        currentSceneIndex.value = scenes.value.length - 1;
+      }
+    };
+
+    const selectEdge = (edge) => {
+      selectedEdge.value = edge;
+      selectedNode.value = null;
+    };
+
+    const startPan = (e) => {
+      if (e.target.closest('.node-card')) return;
+      selectedNode.value = null;
+      selectedEdge.value = null;
+      isDraggingCanvas.value = true;
+      dragOffset.value = { x: e.clientX - camera.value.x, y: e.clientY - camera.value.y };
+    };
+
+    const onMouseMove = (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const worldX = (e.clientX - rect.left - camera.value.x) / camera.value.zoom;
+      const worldY = (e.clientY - rect.top - 95 - camera.value.y) / camera.value.zoom;
+
+      if (activeWire.value) {
+        activeWire.value.mouseX = worldX;
+        activeWire.value.mouseY = worldY;
+        return;
+      }
+      if (draggingNode.value) {
+        const rawX = (e.clientX - camera.value.x) / camera.value.zoom - dragOffset.value.x;
+        const rawY = (e.clientY - camera.value.y) / camera.value.zoom - dragOffset.value.y;
+        draggingNode.value.x = Math.round(rawX / GRID) * GRID;
+        draggingNode.value.y = Math.round(rawY / GRID) * GRID;
+      } else if (isDraggingCanvas.value) {
+        camera.value.x = e.clientX - dragOffset.value.x;
+        camera.value.y = e.clientY - dragOffset.value.y;
+      }
+    };
+
+    const endDrag = () => {
+      draggingNode.value = null;
+      isDraggingCanvas.value = false;
+      activeWire.value = null;
+    };
+
+    const onWheel = (e) => {
+      const factor = e.deltaY < 0 ? 1.08 : 0.92;
+      camera.value.zoom = Number(Math.min(Math.max(camera.value.zoom * factor, 0.35), 2.2).toFixed(2));
+    };
+
+    // UPLOAD OU DRAG-AND-DROP DE IMAGEM DIRETO NO CARD
+    const onUploadImage = (e, node) => {
+      const file = e.target.files?.[0];
+      if (file) node.mediaUrl = URL.createObjectURL(file);
+    };
+
+    const onDropFileOnNode = (e, node) => {
+      const file = e.dataTransfer?.files?.[0];
+      if (file && file.type.startsWith('image/')) {
+        node.type = 'media';
+        node.mediaUrl = URL.createObjectURL(file);
+      }
+    };
+
+    // Cenas e Câmera
+    const activateScene = (idx) => {
+      currentSceneIndex.value = idx;
+      const s = scenes.value[idx];
+      if (s) camera.value = { x: s.x, y: s.y, zoom: s.zoom };
+    };
+    const nextScene = () => activateScene((currentSceneIndex.value + 1) % scenes.value.length);
+    const prevScene = () => activateScene((currentSceneIndex.value - 1 + scenes.value.length) % scenes.value.length);
+    const resetCamera = () => { camera.value = { x: 48, y: 24, zoom: 0.85 }; };
+
+    const focusNode = (node) => {
+      camera.value = {
+        x: Math.round(-node.x * 1.15 + 320),
+        y: Math.round(-node.y * 1.15 + 140),
+        zoom: 1.15
+      };
+    };
+
+    const captureKeyframe = () => {
+      scenes.value.push({
+        name: `cena-${scenes.value.length + 1}`,
+        title: selectedNode.value ? selectedNode.value.title : 'Novo Keyframe de Câmera',
+        subtitle: selectedNode.value ? selectedNode.value.subtitle : 'Transição suave pelo grafo',
+        x: Math.round(camera.value.x),
+        y: Math.round(camera.value.y),
+        zoom: camera.value.zoom
+      });
+      currentSceneIndex.value = scenes.value.length - 1;
+    };
+
+    const removeScene = (idx) => {
+      scenes.value.splice(idx, 1);
+      if (currentSceneIndex.value >= scenes.value.length) currentSceneIndex.value = 0;
+    };
+
+    const toggleLiveRecording = () => { isLiveRecording.value = !isLiveRecording.value; };
+
+    const deleteSelectedNode = () => {
+      if (!selectedNode.value) return;
+      const id = selectedNode.value.id;
+      nodes.value = nodes.value.filter(n => n.id !== id);
+      edges.value = edges.value.filter(e => e.from !== id && e.to !== id);
+      selectedNode.value = null;
+    };
+
+    const deleteSelectedEdge = () => {
+      if (!selectedEdge.value) return;
+      edges.value = edges.value.filter(e => e.id !== selectedEdge.value.id);
+      selectedEdge.value = null;
+    };
+
+    // Exportador JSON ou Componente Remotion Pronto
+    const exportSpec = (mode) => {
+      if (mode === 'json') {
+        exportOutput.value = JSON.stringify({ meta: presentationMeta.value, scenes: scenes.value, nodes: nodes.value, edges: edges.value }, null, 2);
+      } else {
+        exportOutput.value = `// Remotion 60fps Composition Gerada Automaticamente\nimport { AbsoluteFill, useCurrentFrame, interpolate, spring } from 'remotion';\n\nexport const CircuitPresentation = () => {\n  const frame = useCurrentFrame();\n  const scenes = ${JSON.stringify(scenes.value, null, 2)};\n  const nodes = ${JSON.stringify(nodes.value, null, 2)};\n  return <AbsoluteFill style={{ backgroundColor: '#090b0e' }}>{/* Renderiza AST */}</AbsoluteFill>;\n};`;
+      }
+      navigator.clipboard.writeText(exportOutput.value);
+    };
+
+    // INTELIGÊNCIA DE CTRL+V: Se um card estiver selecionado, cola A IMAGEM DENTRO DELE!
+    onMounted(() => {
+      window.addEventListener('keydown', (e) => {
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+        if (e.key === 'ArrowRight') nextScene();
+        if (e.key === 'ArrowLeft') prevScene();
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          if (selectedNode.value) deleteSelectedNode();
+          else if (selectedEdge.value) deleteSelectedEdge();
+        }
+      });
+
+      window.addEventListener('paste', (e) => {
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        for (const item of items) {
+          if (item.type.indexOf('image') !== -1) {
+            const blob = item.getAsFile();
+            const url = URL.createObjectURL(blob);
+
+            // Se o usuário estiver com um card selecionado, injeta a imagem direto nele!
+            if (selectedNode.value) {
+              if (!['media', 'browser'].includes(selectedNode.value.type)) {
+                selectedNode.value.type = 'media';
+              }
+              selectedNode.value.mediaUrl = url;
+              selectedNode.value.badge = '[ok] colado';
+              return;
+            }
+
+            // Caso contrário, cria um novo card de imagem numa posição livre
+            const newNode = {
+              id: 'n' + Date.now(),
+              type: 'media',
+              variant: 'cinema',
+              groupLabel: 'imagem colada',
+              title: 'Captura Colada (Ctrl+V)',
+              subtitle: 'Pronto para apresentação',
+              badge: '[ok] clipboard',
+              mediaUrl: url,
+              x: Math.round((280 - camera.value.x) / camera.value.zoom / GRID) * GRID,
+              y: Math.round((180 - camera.value.y) / camera.value.zoom / GRID) * GRID,
+              w: 384
+            };
+            nodes.value.push(newNode);
+            selectedNode.value = newNode;
+            return;
+          }
+        }
+      });
+    });
+
+    return {
+      leftTab, searchCatalog, catalog, filteredCatalog, canvasTheme,
+      presentationMeta, camera, nodes, edges, scenes, currentSceneIndex, currentScene,
+      selectedNode, selectedEdge, isPresenting, isLiveRecording, activeWire, aiPromptText, exportOutput,
+      parseList, getPortCoords, computeSmartManhattanPath, getEdgeMidpoint,
+      startWire, computeLiveWirePath, completeWire, completeWireOnNode,
+      addNodeFromCatalog, autoLayoutNodes, generateGraphFromScript,
+      startDragNode, selectEdge, startPan, onMouseMove, endDrag, onWheel,
+      onUploadImage, onDropFileOnNode,
+      activateScene, nextScene, prevScene, resetCamera, focusNode,
+      captureKeyframe, removeScene, toggleLiveRecording, deleteSelectedNode, deleteSelectedEdge, exportSpec
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,337 @@
+/**
+ * CircuitFlow Studio Catalog
+ * 15 specialized node types with 3 variations each and default creation templates.
+ */
+
+export const NODE_CATALOG = [
+  {
+    type: 'chip',
+    name: '01. Chip PCB / Caminho',
+    icon: '▣',
+    color: 'text-amber-400',
+    desc: 'Caminhos, binários e módulos IC',
+    defaultHeight: 112,
+    variants: [
+      { id: 'amber', label: 'Original' },
+      { id: 'cyan', label: 'Ciano' },
+      { id: 'emerald', label: 'Kernel' }
+    ]
+  },
+  {
+    type: 'terminal',
+    name: '02. Prompt / Agente IA',
+    icon: '>_',
+    color: 'text-cyan-400',
+    desc: 'Claude Code, Codex ou Bash CLI',
+    defaultHeight: 225,
+    variants: [
+      { id: 'claude', label: 'Agente IA' },
+      { id: 'bash', label: 'Bash ZSH' },
+      { id: 'logs', label: 'Logs' }
+    ]
+  },
+  {
+    type: 'finder',
+    name: '03. Finder / Arquivos',
+    icon: '📁',
+    color: 'text-blue-400',
+    desc: 'Lista de aplicativos ou árvore',
+    defaultHeight: 215,
+    variants: [
+      { id: 'macos', label: 'Finder' },
+      { id: 'tree', label: 'VSCode Tree' },
+      { id: 'archive', label: 'Binários' }
+    ]
+  },
+  {
+    type: 'media',
+    name: '04. Vídeo / Imagem (Ctrl+V)',
+    icon: '▶',
+    color: 'text-emerald-400',
+    desc: 'Aceita colar print direto dentro',
+    defaultHeight: 280,
+    variants: [
+      { id: 'cinema', label: '16:9 Vídeo' },
+      { id: 'pip', label: 'Captura' },
+      { id: 'split', label: 'Demo' }
+    ]
+  },
+  {
+    type: 'code',
+    name: '05. Código / Diff Git',
+    icon: '{}',
+    color: 'text-purple-400',
+    desc: 'C++, TypeScript, Assembly ou Diff',
+    defaultHeight: 165,
+    variants: [
+      { id: 'code', label: 'Código' },
+      { id: 'diff', label: 'Git Diff' },
+      { id: 'asm', label: 'Assembly' }
+    ]
+  },
+  {
+    type: 'database',
+    name: '06. Banco de Dados / Vector',
+    icon: '🗄',
+    color: 'text-indigo-400',
+    desc: 'Tabelas SQL, JSON ou Qdrant',
+    defaultHeight: 190,
+    variants: [
+      { id: 'postgres', label: 'SQL Table' },
+      { id: 'vector', label: 'Vector DB' },
+      { id: 'json', label: 'Documento' }
+    ]
+  },
+  {
+    type: 'api',
+    name: '07. API / Webhook REST',
+    icon: '⇄',
+    color: 'text-amber-300',
+    desc: 'Endpoints POST, GET e WebSockets',
+    defaultHeight: 170,
+    variants: [
+      { id: 'post', label: 'POST JSON' },
+      { id: 'get', label: 'GET 200' },
+      { id: 'ws', label: 'WebSocket' }
+    ]
+  },
+  {
+    type: 'mobile',
+    name: '08. Mobile / WhatsApp UI',
+    icon: '📱',
+    color: 'text-emerald-300',
+    desc: 'Simulador iPhone ou Chat Bot',
+    defaultHeight: 210,
+    variants: [
+      { id: 'whatsapp', label: 'WhatsApp' },
+      { id: 'iphone', label: 'App iOS' },
+      { id: 'push', label: 'Push Alert' }
+    ]
+  },
+  {
+    type: 'browser',
+    name: '09. Browser / SaaS Window',
+    icon: '🌐',
+    color: 'text-sky-400',
+    desc: 'Janela Chrome com URL e print',
+    defaultHeight: 260,
+    variants: [
+      { id: 'chrome', label: 'Chrome UI' },
+      { id: 'dashboard', label: 'SaaS Painel' },
+      { id: 'ext', label: 'Extensão' }
+    ]
+  },
+  {
+    type: 'metric',
+    name: '10. Métrica / Benchmark KPI',
+    icon: '📈',
+    color: 'text-teal-400',
+    desc: 'FPS, Latência, MRR e Progresso',
+    defaultHeight: 150,
+    variants: [
+      { id: 'fps', label: '60 FPS' },
+      { id: 'latency', label: 'Latência' },
+      { id: 'roi', label: 'Receita' }
+    ]
+  },
+  {
+    type: 'queue',
+    name: '11. Fila / RabbitMQ / Redis',
+    icon: '⚡',
+    color: 'text-amber-400',
+    desc: 'Workers assíncronos e streams',
+    defaultHeight: 160,
+    variants: [
+      { id: 'rabbitmq', label: 'RabbitMQ' },
+      { id: 'redis', label: 'Redis Queue' },
+      { id: 'kafka', label: 'Stream' }
+    ]
+  },
+  {
+    type: 'hardware',
+    name: '12. Hardware / Stream Deck',
+    icon: '🎛',
+    color: 'text-cyan-300',
+    desc: 'Botões configuráveis e placas',
+    defaultHeight: 190,
+    variants: [
+      { id: 'deck', label: 'Stream Deck' },
+      { id: 'gpu', label: 'GPU Cores' },
+      { id: 'prompter', label: 'Prompter' }
+    ]
+  },
+  {
+    type: 'decision',
+    name: '13. Decisão / Roteador IA',
+    icon: '◇',
+    color: 'text-purple-400',
+    desc: 'Condicional If/Else ou Auth Gate',
+    defaultHeight: 130,
+    variants: [
+      { id: 'if', label: 'If / Else' },
+      { id: 'router', label: 'OmniRoute' },
+      { id: 'auth', label: 'Guard' }
+    ]
+  },
+  {
+    type: 'compare',
+    name: '14. Comparativo Antes/Depois',
+    icon: '⚖',
+    color: 'text-rose-400',
+    desc: 'Legado vs Recompilado Nativo',
+    defaultHeight: 150,
+    variants: [
+      { id: 'versus', label: 'Lado a Lado' },
+      { id: 'mig', label: 'Migração' },
+      { id: 'bench', label: 'Ganho' }
+    ]
+  },
+  {
+    type: 'callout',
+    name: '15. Callout / Evidência',
+    icon: '⚠',
+    color: 'text-yellow-400',
+    desc: 'Destaque técnico ou observação',
+    defaultHeight: 120,
+    variants: [
+      { id: 'warn', label: 'Alerta' },
+      { id: 'proof', label: 'Evidência' },
+      { id: 'note', label: 'Nota' }
+    ]
+  }
+];
+
+export const NODE_TEMPLATES = {
+  chip: {
+    title: '/usr/local/bin/target.app',
+    subtitle: 'BINÁRIO DE SISTEMA',
+    badge: 'alvo',
+    w: 432,
+    content: ''
+  },
+  terminal: {
+    title: 'Agente IA',
+    subtitle: 'npx rea-agents@latest inspect',
+    badge: 'MCP ativo',
+    w: 456,
+    content: '> Analise as funções exportadas e reconstrua o módulo de áudio.'
+  },
+  finder: {
+    title: 'Workspace',
+    subtitle: 'arquivos',
+    badge: 'src/core',
+    w: 360,
+    content: 'main_loop.cpp\n*audio_driver.rs\nshader_cache.bin'
+  },
+  media: {
+    title: 'Demonstração Visual',
+    subtitle: 'Aperte Ctrl+V para colar print',
+    badge: '[ok] 60 fps',
+    w: 384,
+    mediaUrl: ''
+  },
+  code: {
+    title: 'patch_engine.rs',
+    badge: 'testado',
+    w: 384,
+    content: '+ fn bypass_drm_check() -> bool {\n+   return true;\n+ }'
+  },
+  database: {
+    title: 'tenants_schema',
+    badge: 'PostgreSQL',
+    w: 336,
+    content: '*id: UUID PK\ncompany_name: VARCHAR\nvector_embedding: FLOAT[1536]'
+  },
+  api: {
+    title: '/v1/video/render',
+    badge: '200 OK',
+    w: 360,
+    content: '{\n  "fps": 60,\n  "resolution": "4K",\n  "status": "queued"\n}'
+  },
+  mobile: {
+    title: 'Agente WhatsApp',
+    badge: 'Online',
+    w: 312,
+    content: 'Olá! Como posso gerar meu vídeo?\n*Envie o roteiro e eu crio o grafo automático!'
+  },
+  browser: {
+    title: 'Painel SaaS Multi-Tenant',
+    subtitle: 'app.circuitflow.io/studio',
+    badge: 'v2.0',
+    w: 384,
+    content: 'Renderização em nuvem ativa com workers paralelos.'
+  },
+  metric: {
+    title: '60.0 FPS',
+    subtitle: 'PERFORMANCE NATIVA',
+    badge: '+142%',
+    w: 288,
+    content: 'Tempo de quadro estabilizado em 16.6ms'
+  },
+  queue: {
+    title: 'RabbitMQ Render Exchange',
+    badge: '4 workers',
+    w: 360,
+    content: 'Distribuindo cenas para containers Remotion FFmpeg'
+  },
+  hardware: {
+    title: 'Elgato Stream Deck XL',
+    badge: 'HID USB',
+    w: 336,
+    content: '*Play\nPause\n*Cap +1\nVel +'
+  },
+  decision: {
+    title: 'Verificar Assinatura / Caminho',
+    subtitle: 'ROTEADOR LÓGICO',
+    badge: 'condicional',
+    w: 336,
+    content: 'Se encontrar evidência no binário ▸ Gerar prova de conceito'
+  },
+  compare: {
+    title: 'Comparativo de Arquitetura',
+    badge: 'Benchmark',
+    w: 408,
+    content: '20 minutos compilando\nPreso ao hardware | Instantâneo no Canvas\nMultiplataforma 60fps'
+  },
+  callout: {
+    title: 'Nota de Engenharia',
+    badge: 'Importante',
+    w: 336,
+    content: 'Nenhuma linha de código proprietário foi copiada durante a observação.'
+  }
+};
+
+/**
+ * Estimate node height based on its type and content length
+ * @param {Object} node
+ * @returns {number}
+ */
+export function estimateNodeHeight(node) {
+  if (!node) return 140;
+  const baseMap = {
+    chip: 112,
+    finder: 215,
+    terminal: 225,
+    media: 280,
+    code: 165,
+    database: 190,
+    api: 170,
+    mobile: 210,
+    browser: 260,
+    metric: 150,
+    queue: 160,
+    hardware: 190,
+    decision: 130,
+    compare: 150,
+    callout: 120
+  };
+
+  const base = baseMap[node.type] || 160;
+  if (node.content && typeof node.content === 'string') {
+    const lines = node.content.split('\n').length;
+    if (lines > 6) {
+      return base + (lines - 6) * 16;
+    }
+  }
+  return base;
+}
