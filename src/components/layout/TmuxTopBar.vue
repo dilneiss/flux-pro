@@ -23,6 +23,10 @@ defineProps({
   canvasTheme: {
     type: String,
     default: 'theme-pcb'
+  },
+  isSpotlightActive: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -33,7 +37,8 @@ const emit = defineEmits([
   'toggle-record-screen',
   'open-marketplace',
   'open-audio-sync',
-  'toggle-chroma'
+  'toggle-chroma',
+  'toggle-spotlight'
 ]);
 </script>
 
@@ -81,6 +86,18 @@ const emit = defineEmits([
         title="Modo Chroma/Alpha para OBS e PiP"
       >
         <span>🟢</span> Chroma/PiP
+      </button>
+      <button
+        @click="emit('toggle-spotlight')"
+        :class="
+          isSpotlightActive
+            ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.25)] font-bold'
+            : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-slate-300'
+        "
+        class="px-2 py-0.5 rounded border text-[11px] transition flex items-center gap-1 font-mono"
+        title="Spotlight Cinematográfico: escurece nós secundários e foca no nó ativo"
+      >
+        <span>💡</span> Spotlight
       </button>
     </div>
 

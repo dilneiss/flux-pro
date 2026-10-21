@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import PortHandle from './PortHandle.vue';
 import NodeRenderer from '../nodes/NodeRenderer.vue';
 
@@ -18,6 +18,14 @@ const props = defineProps({
   },
   activeWireSourceId: {
     type: String,
+    default: null
+  },
+  isSpotlightActive: {
+    type: Boolean,
+    default: false
+  },
+  activeNodeIds: {
+    type: Array,
     default: null
   }
 });
@@ -41,6 +49,7 @@ const onDropFile = (e) => {
     emit('drop-file', { file, node: props.node });
   }
 };
+
 const onMouseDown = (e) => {
   if (e.target.closest('button, input, select, textarea, a, .port-handle')) return;
   emit('drag-start', e, props.node);
@@ -52,6 +61,16 @@ const onMouseUp = () => {
   }
   emit('drag-end');
 };
+
+const isDimmed = computed(() => {
+  if (!props.isSpotlightActive || !props.activeNodeIds) return false;
+  return !props.activeNodeIds.includes(props.node.id) && !props.isSelected;
+});
+
+const isFocused = computed(() => {
+  if (!props.isSpotlightActive || !props.activeNodeIds) return false;
+  return props.activeNodeIds.includes(props.node.id);
+});
 </script>
 
 <template>
@@ -63,13 +82,17 @@ const onMouseUp = () => {
       width: `${node.w || 384}px`
     }"
     :class="[
-      'node-card absolute z-10 rounded bg-[#10141c]/95 transition-shadow duration-150 select-none cursor-move',
+      'node-card absolute z-10 rounded bg-[#10141c]/95 select-none cursor-move',
       node.type === 'chip' ? 'ic-pins' : '',
       isSelected
-        ? 'ring-2 ring-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.3)]'
+        ? 'ring-2 ring-cyan-400 shadow-[0_0_35px_rgba(6,182,212,0.35)] opacity-100 z-20'
         : isDragOver
-        ? 'ring-2 ring-emerald-400 bg-emerald-950/40 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
-        : 'border border-slate-700/80 shadow-2xl hover:border-slate-500/80'
+        ? 'ring-2 ring-emerald-400 bg-emerald-950/40 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)] opacity-100'
+        : isDimmed
+        ? 'opacity-25 saturate-50 brightness-50 transition-all duration-500 border border-slate-800 hover:opacity-100 hover:saturate-100 hover:brightness-100'
+        : isFocused
+        ? 'opacity-100 ring-2 ring-cyan-400/70 shadow-[0_0_30px_rgba(6,182,212,0.25)] transition-all duration-500 border border-slate-700/80'
+        : 'border border-slate-700/80 shadow-2xl hover:border-slate-500/80 transition-all duration-500'
     ]"
     @mousedown="onMouseDown"
     @mouseup="onMouseUp"

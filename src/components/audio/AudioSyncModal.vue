@@ -18,9 +18,21 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'activate-scene', 'update-scenes']);
 
+const apiKey = ref('');
 const voiceId = ref('21m00Tcm4TlvDq8ikWAM'); // Rachel (ElevenLabs default)
 const isAutoCalculating = ref(false);
 const syncStatus = ref('');
+const uploadedAudioName = ref('');
+
+const onAudioFileUpload = (e) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    uploadedAudioName.value = file.name;
+    const url = URL.createObjectURL(file);
+    props.elevenLabs.loadAudio(url);
+    syncStatus.value = `✔ Áudio "${file.name}" carregado com sucesso!`;
+  }
+};
 
 const handleAutoSync = async () => {
   isAutoCalculating.value = true;
@@ -31,6 +43,7 @@ const handleAutoSync = async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        apiKey: apiKey.value,
         voiceId: voiceId.value,
         scenes: props.scenes
       })
@@ -76,7 +89,7 @@ const handleAutoSync = async () => {
               Sincronização Vocal ElevenLabs (with-timestamps)
             </h2>
             <p class="text-[11px] text-slate-400 font-sans">
-              A câmera muda de bloco sozinha no ritmo exato em que a voz pronuncia cada frase
+              Apresentação 100% autônoma: a câmera voa sozinha no ritmo exato da voz
             </p>
           </div>
         </div>
@@ -92,23 +105,42 @@ const handleAutoSync = async () => {
       <div class="p-5 overflow-y-auto space-y-4 text-xs font-sans">
         <!-- Voice Configuration & Sync Trigger -->
         <div class="p-3.5 bg-slate-900/80 border border-slate-800 rounded-lg space-y-3 font-mono">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-200">Voz ElevenLabs:</span>
-            <input
-              v-model="voiceId"
-              placeholder="Voice ID (ex: 21m00Tcm4TlvDq8ikWAM)"
-              class="w-64 bg-black border border-slate-700 rounded px-2.5 py-1 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500"
-            />
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <span class="text-[10px] text-slate-400 uppercase font-bold block mb-1">API Key ElevenLabs:</span>
+              <input
+                v-model="apiKey"
+                type="password"
+                placeholder="xi-api-key (opcional)..."
+                class="w-full bg-black border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Voz ElevenLabs:</span>
+              <input
+                v-model="voiceId"
+                placeholder="Voice ID (ex: 21m00Tcm4TlvDq8ikWAM)"
+                class="w-full bg-black border border-slate-700 rounded px-2.5 py-1 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500"
+              />
+            </div>
           </div>
 
-          <button
-            @click="handleAutoSync"
-            :disabled="isAutoCalculating"
-            class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold rounded text-xs transition flex items-center justify-center gap-2"
-          >
-            <span>⚡</span>
-            {{ isAutoCalculating ? 'Calculando Alinhamento...' : 'Calcular Timestamps da Narração' }}
-          </button>
+          <div class="flex items-center justify-between pt-1">
+            <label class="cursor-pointer px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] flex items-center gap-1.5 transition">
+              <span>📁</span>
+              <span>{{ uploadedAudioName || 'Upload de Gravação (.mp3 / .wav)' }}</span>
+              <input type="file" accept="audio/*" class="hidden" @change="onAudioFileUpload" />
+            </label>
+
+            <button
+              @click="handleAutoSync"
+              :disabled="isAutoCalculating"
+              class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold rounded text-xs transition flex items-center gap-1.5 shadow"
+            >
+              <span>⚡</span>
+              <span>{{ isAutoCalculating ? 'Calculando...' : 'Calcular Timestamps' }}</span>
+            </button>
+          </div>
 
           <div v-if="syncStatus" class="text-[11px] text-emerald-300 font-bold text-center">
             {{ syncStatus }}
@@ -139,7 +171,7 @@ const handleAutoSync = async () => {
               @click="elevenLabs.togglePlay"
               class="px-3 py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-300 font-bold text-xs"
             >
-              {{ elevenLabs.isPlaying.value ? '⏸ Pausar Simulação' : '▶ Reproduzir com Câmera' }}
+              {{ elevenLabs.isPlaying.value ? '⏸ Pausar Apresentação' : '▶ Iniciar Apresentação Zero-Touch' }}
             </button>
             <label class="flex items-center gap-2 text-[11px] text-slate-300 cursor-pointer">
               <input type="checkbox" v-model="elevenLabs.isSyncActive.value" class="accent-cyan-400" />

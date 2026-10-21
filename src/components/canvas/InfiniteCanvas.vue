@@ -47,6 +47,14 @@ const props = defineProps({
   getNodeById: {
     type: Function,
     required: true
+  },
+  isSpotlightActive: {
+    type: Boolean,
+    default: false
+  },
+  activeNodeIds: {
+    type: Array,
+    default: null
   }
 });
 
@@ -198,6 +206,8 @@ onUnmounted(() => {
         :selected-edge="selectedEdge"
         :active-wire="activeWire"
         :get-node-by-id="getNodeById"
+        :is-spotlight-active="isSpotlightActive"
+        :active-node-ids="activeNodeIds"
         @select-edge="(edge) => emit('edge-select', edge)"
       />
 
@@ -210,6 +220,8 @@ onUnmounted(() => {
         :is-presenting="isPresenting"
         :active-wire-source-id="activeWire?.fromId"
         @drag-start="(e, n) => emit('node-drag-start', e, n)"
+        :is-spotlight-active="isSpotlightActive"
+        :active-node-ids="activeNodeIds"
         @drag-end="() => emit('end-pan')"
         @select="(n) => emit('node-select', n)"
         @start-wire="({ node: n, port }) => emit('start-wire', { node: n, port })"

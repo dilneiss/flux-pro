@@ -16,7 +16,7 @@ defineProps({
       </span>
     </div>
     <pre
-      class="p-3 bg-[#090c10] text-[11px] leading-relaxed overflow-x-auto font-mono"
+      class="p-3 bg-[#090c10] text-[11px] leading-relaxed overflow-x-auto font-mono typewriter-line"
       :class="
         node.variant === 'diff'
           ? 'text-emerald-300'

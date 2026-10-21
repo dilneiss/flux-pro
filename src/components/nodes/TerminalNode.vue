@@ -22,7 +22,7 @@ defineProps({
       <span class="text-[10px] text-emerald-400 font-mono">● {{ node.badge }}</span>
     </div>
     <div class="p-3.5 bg-[#0b0e13] text-xs leading-relaxed space-y-2.5 font-mono">
-      <div class="text-slate-200 whitespace-pre-line">{{ node.content }}</div>
+      <div class="text-slate-200 whitespace-pre-line typewriter-line">{{ node.content }}</div>
       <div
         v-if="node.subtitle"
         class="inline-block bg-cyan-950/90 border border-cyan-500/60 text-cyan-300 px-2 py-0.5 rounded text-[11px] break-all"

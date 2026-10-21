@@ -1,6 +1,7 @@
 /**
  * Default Project Initial Data
- * Perfect non-overlapping layout matching the reference flow.
+ * Perfect non-overlapping layout matching the reference flow,
+ * with spacious vertical corridors (144px+) and spotlight scene focus.
  */
 
 export const DEFAULT_META = {
@@ -18,8 +19,8 @@ export const DEFAULT_NODES = [
     title: '/Applications/Elgato Camera Hub.app',
     subtitle: 'ENDEREÇO DO APLICATIVO NO MAC',
     badge: 'alvo',
-    x: 192,
-    y: 48,
+    x: 96,
+    y: 120,
     w: 624,
     content: ''
   },
@@ -32,8 +33,8 @@ export const DEFAULT_NODES = [
     subtitle: 'pasta aplicativos',
     badge: 'Elgato Camera Hub',
     content: 'DisplayLink Manager\nElvCapture\n*Elgato Camera Hub\nElgato Stream Deck',
-    x: 48,
-    y: 240,
+    x: 96,
+    y: 336,
     w: 384
   },
   {
@@ -45,8 +46,8 @@ export const DEFAULT_NODES = [
     subtitle: '/Applications/Elgato Camera Hub.app',
     badge: 'REA conectado',
     content: '> Use o REA pra analisar o Camera Hub nesse Mac.\n\nEu quero entender como ele controla a rolagem dos textos dos meus roteiros.\n\nMostre os arquivos ou trechos de código que sustentam a resposta.',
-    x: 504,
-    y: 240,
+    x: 864,
+    y: 336,
     w: 480
   },
   {
@@ -58,8 +59,8 @@ export const DEFAULT_NODES = [
     subtitle: 'Recompilação Estática PowerPC ▸ C++',
     badge: '[ok] 60 fps nativo',
     mediaUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
-    x: 1080,
-    y: 48,
+    x: 1488,
+    y: 120,
     w: 384,
     content: ''
   },
@@ -71,8 +72,8 @@ export const DEFAULT_NODES = [
     title: 'prompter_controller.ts',
     badge: '[ok] testado',
     content: 'while (playing) {\n  const dt = clock.tick();\n  prompter.scrollBy(0, speed * dt);\n}',
-    x: 1080,
-    y: 384,
+    x: 1488,
+    y: 456,
     w: 384
   }
 ];
@@ -91,7 +92,7 @@ export const DEFAULT_EDGES = [
   {
     id: 'e2',
     from: 'n1',
-    fromPort: 'bottom',
+    fromPort: 'right',
     to: 'n3',
     toPort: 'top',
     label: 'o Camera Hub',
@@ -135,33 +136,41 @@ export const DEFAULT_SCENES = [
     name: 'caminho do aplicativo',
     title: 'informe o caminho do aplicativo',
     subtitle: 'o endereço dele no computador',
-    x: 48,
-    y: 24,
-    zoom: 0.9
+    x: 96,
+    y: 72,
+    zoom: 0.88,
+    startTime: 0,
+    activeNodeIds: ['n1', 'n2']
   },
   {
     name: 'foco no finder',
     title: 'localize o binário no sistema',
     subtitle: 'pasta Applications do macOS',
-    x: 140,
-    y: -120,
-    zoom: 1.2
+    x: 96,
+    y: -140,
+    zoom: 1.15,
+    startTime: 4.5,
+    activeNodeIds: ['n2']
   },
   {
     name: 'pedido ao agente',
     title: 'o pedido de investigação com evidência',
     subtitle: 'colando o caminho no Claude Code / Codex',
-    x: -320,
-    y: -120,
-    zoom: 1.15
+    x: -420,
+    y: -140,
+    zoom: 1.15,
+    startTime: 9.0,
+    activeNodeIds: ['n3']
   },
   {
     name: 'execução e código',
     title: 'do binário fechado para uma versão própria',
     subtitle: 'resultado rodando a 60fps sem sobreposição',
-    x: -760,
-    y: -20,
-    zoom: 1.0
+    x: -860,
+    y: -40,
+    zoom: 1.0,
+    startTime: 14.0,
+    activeNodeIds: ['n5', 'n4']
   }
 ];
 

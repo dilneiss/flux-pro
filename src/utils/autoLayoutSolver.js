@@ -21,9 +21,9 @@ export function solveAutoLayout(nodes, edges, options = {}) {
   if (!nodes || nodes.length === 0) return { nodes: [], edges: [] };
 
   const startX = options.startX ?? 96;
-  const startY = options.startY ?? 48;
+  const startY = options.startY ?? 120;
   const gapX = options.gapX ?? 144; // Generous horizontal corridor for Manhattan wires and badges
-  const gapY = options.gapY ?? 72;  // Vertical space between stacked cards
+  const gapY = options.gapY ?? 96;  // Vertical space between stacked cards
 
   const clonedNodes = JSON.parse(JSON.stringify(nodes));
   const clonedEdges = JSON.parse(JSON.stringify(edges || []));

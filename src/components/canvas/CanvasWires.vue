@@ -22,6 +22,14 @@ const props = defineProps({
   getNodeById: {
     type: Function,
     required: true
+  },
+  isSpotlightActive: {
+    type: Boolean,
+    default: false
+  },
+  activeNodeIds: {
+    type: Array,
+    default: null
   }
 });
 
@@ -40,6 +48,13 @@ const getEdgeColor = (color) => {
       return { main: '#06b6d4', shadow: '#164e63', pulse: '#a5f3fc' };
   }
 };
+
+const isEdgeInSpotlight = (edge) => {
+  if (!props.isSpotlightActive || !props.activeNodeIds) return true;
+  if (props.selectedEdge?.id === edge.id) return true;
+  // Edge is illuminated if either its source or target is active
+  return props.activeNodeIds.includes(edge.from) || props.activeNodeIds.includes(edge.to);
+};
 </script>
 
 <template>
@@ -53,14 +68,15 @@ const getEdgeColor = (color) => {
 
     <!-- Existing Connections -->
     <g
-      v-for="edge in edges"
+      v-for="(edge, index) in edges"
       :key="edge.id"
-      class="pointer-events-auto cursor-pointer group"
+      class="pointer-events-auto cursor-pointer group transition-opacity duration-500"
+      :class="isEdgeInSpotlight(edge) ? 'opacity-100' : 'opacity-15'"
       @click.stop="emit('select-edge', edge)"
     >
       <!-- Invisible thick hit area for easy selection -->
       <path
-        :d="computeSmartManhattanPath(edge, getNodeById)"
+        :d="computeSmartManhattanPath(edge, getNodeById, index)"
         stroke="transparent"
         stroke-width="18"
         fill="none"
@@ -68,7 +84,7 @@ const getEdgeColor = (color) => {
 
       <!-- Shadow Trace -->
       <path
-        :d="computeSmartManhattanPath(edge, getNodeById)"
+        :d="computeSmartManhattanPath(edge, getNodeById, index)"
         :stroke="getEdgeColor(edge.color).shadow"
         stroke-width="3"
         fill="none"
@@ -77,7 +93,7 @@ const getEdgeColor = (color) => {
 
       <!-- Main Wire Line -->
       <path
-        :d="computeSmartManhattanPath(edge, getNodeById)"
+        :d="computeSmartManhattanPath(edge, getNodeById, index)"
         :stroke="getEdgeColor(edge.color).main"
         :stroke-width="selectedEdge?.id === edge.id ? '3.5' : '1.8'"
         fill="none"
@@ -88,7 +104,7 @@ const getEdgeColor = (color) => {
       <!-- Animated Electrical Pulse -->
       <path
         v-if="edge.animated !== false"
-        :d="computeSmartManhattanPath(edge, getNodeById)"
+        :d="computeSmartManhattanPath(edge, getNodeById, index)"
         :stroke="getEdgeColor(edge.color).pulse"
         stroke-width="2.6"
         fill="none"
@@ -113,7 +129,7 @@ const getEdgeColor = (color) => {
       <!-- Label Badge at Edge Midpoint -->
       <g
         v-if="edge.label"
-        :transform="`translate(${getEdgeMidpoint(edge, getNodeById).x}, ${getEdgeMidpoint(edge, getNodeById).y})`"
+        :transform="`translate(${getEdgeMidpoint(edge, getNodeById, index).x}, ${getEdgeMidpoint(edge, getNodeById, index).y})`"
       >
         <rect
           x="-52"

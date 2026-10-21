@@ -35,6 +35,23 @@ const canvasTheme = ref('theme-pcb');
 const isMarketplaceOpen = ref(false);
 const isAudioSyncOpen = ref(false);
 const isRenderOpen = ref(false);
+const isSpotlightActive = ref(true);
+
+const activeNodeIds = computed(() => {
+  if (!isSpotlightActive.value) return null;
+  if (selectedNode.value) {
+    const activeSet = new Set([selectedNode.value.id]);
+    edges.value.forEach((e) => {
+      if (e.from === selectedNode.value.id) activeSet.add(e.to);
+      if (e.to === selectedNode.value.id) activeSet.add(e.from);
+    });
+    return Array.from(activeSet);
+  }
+  if (currentScene.value?.activeNodeIds?.length) {
+    return currentScene.value.activeNodeIds;
+  }
+  return null;
+});
 
 // Core Composables
 const {
@@ -98,8 +115,13 @@ const screenRecorder = useScreenRecorder();
 const handleToggleRecordScreen = async () => {
   if (screenRecorder.isRecording.value) {
     screenRecorder.stopRecording();
+    isPresenting.value = false;
   } else {
-    await screenRecorder.startRecording();
+    isPresenting.value = true;
+    const started = await screenRecorder.startRecording();
+    if (!started) {
+      isPresenting.value = false;
+    }
   }
 };
 
@@ -295,6 +317,7 @@ onUnmounted(() => {
         :is-recording-screen="screenRecorder.isRecording.value"
         :recording-duration-formatted="screenRecorder.formatDuration(screenRecorder.recordingDuration.value)"
         :canvas-theme="canvasTheme"
+        :is-spotlight-active="isSpotlightActive"
         @auto-layout="autoLayout"
         @reset-camera="resetCamera"
         @toggle-presenting="togglePresenting"
@@ -302,6 +325,7 @@ onUnmounted(() => {
         @open-marketplace="isMarketplaceOpen = true"
         @open-audio-sync="isAudioSyncOpen = true"
         @toggle-chroma="handleToggleChroma"
+        @toggle-spotlight="isSpotlightActive = !isSpotlightActive"
       />
 
       <!-- Scene Header (Narrative HUD) -->
@@ -324,6 +348,8 @@ onUnmounted(() => {
         :is-presenting="isPresenting"
         :canvas-theme="canvasTheme"
         :get-node-by-id="getNodeById"
+        :is-spotlight-active="isSpotlightActive"
+        :active-node-ids="activeNodeIds"
         @start-pan="startPan"
         @pan="handlePanMove"
         @end-pan="handlePanEnd"
