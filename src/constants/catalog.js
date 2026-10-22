@@ -308,7 +308,9 @@ export const NODE_TEMPLATES = {
  */
 export function estimateNodeHeight(node) {
   if (!node) return 140;
-
+  if (node.customHeight && typeof node.customHeight === 'number') {
+    return node.customHeight;
+  }
   if (typeof document !== 'undefined') {
     const el = document.getElementById(`node-${node.id}`);
     if (el && el.offsetHeight > 0) {

@@ -224,6 +224,25 @@ const badgePresets = ['alvo', '[ok]', '60 fps', 'online', 'ativo', 'diff', 'Post
           </button>
         </div>
       </div>
+      <input
+        type="range"
+        min="240"
+        max="960"
+        step="24"
+        v-model.number="node.w"
+        class="w-full accent-cyan-400 cursor-pointer"
+      />
+
+      <div v-if="node.customHeight" class="flex items-center justify-between pt-1 border-t border-slate-800/60 text-[10px]">
+        <span class="text-slate-400">Altura ajustada: <b class="text-cyan-300">{{ node.customHeight }}px</b></span>
+        <button
+          @click="node.customHeight = undefined"
+          class="text-[10px] text-rose-400 hover:text-rose-300 font-bold"
+          title="Restaurar altura automática baseada no conteúdo"
+        >
+          ↺ Auto
+        </button>
+      </div>
 
       <!-- Quick Width Presets -->
       <div class="grid grid-cols-6 gap-1">

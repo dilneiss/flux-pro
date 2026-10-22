@@ -214,6 +214,8 @@ onUnmounted(() => {
         :active-wire-source-id="activeWire?.fromId"
         :is-spotlight-active="isSpotlightActive"
         :active-node-ids="activeNodeIds"
+        :camera="camera"
+        @resize-end="() => emit('end-pan')"
         @drag-start="(e, n) => emit('node-drag-start', e, n)"
         @drag-end="() => emit('end-pan')"
         @select="(n) => emit('node-select', n)"

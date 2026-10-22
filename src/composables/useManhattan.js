@@ -8,10 +8,10 @@ import { estimateNodeHeight } from '@/constants/catalog';
  */
 export function getPortCoords(node, port = 'right') {
   if (!node) return { x: 0, y: 0 };
-  let h = estimateNodeHeight(node);
+  let h = node.customHeight || estimateNodeHeight(node);
   let w = node.w || 384;
 
-  if (typeof document !== 'undefined') {
+  if (!node.customHeight && typeof document !== 'undefined') {
     const el = document.getElementById(`node-${node.id}`);
     if (el && el.offsetHeight > 0) {
       h = el.offsetHeight;
