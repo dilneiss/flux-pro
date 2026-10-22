@@ -19,10 +19,14 @@ defineProps({
   edgeCount: {
     type: Number,
     required: true
+  },
+  isPlayingKeyframes: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['prev-scene', 'next-scene']);
+const emit = defineEmits(['prev-scene', 'next-scene', 'toggle-play']);
 </script>
 
 <template>
@@ -48,6 +52,18 @@ const emit = defineEmits(['prev-scene', 'next-scene']);
       <span class="text-slate-400 text-[11px] px-2 font-mono">
         Keyframe <span class="text-cyan-400 font-bold">{{ currentSceneIndex + 1 }}</span> / {{ totalScenes }}
       </span>
+      <button
+        @click="emit('toggle-play')"
+        :class="
+          isPlayingKeyframes
+            ? 'bg-amber-500 text-slate-950 font-bold'
+            : 'bg-cyan-500/10 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40'
+        "
+        class="px-2 py-0.5 rounded text-[11px] font-bold transition flex items-center gap-1"
+        title="Play / Pause Apresentação Automática (Barra de Espaço)"
+      >
+        <span>{{ isPlayingKeyframes ? '⏸ Pausar' : '▶ Play (Espaço)' }}</span>
+      </button>
 
       <button
         @click="emit('next-scene')"

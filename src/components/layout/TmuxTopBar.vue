@@ -68,7 +68,7 @@ const emit = defineEmits([
         class="px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 transition flex items-center gap-1"
         title="Explorar presets prontos para nichos comerciais"
       >
-        <span>💎</span> Templates SaaS
+        <span>📦</span> Templates SaaS
       </button>
 
       <button

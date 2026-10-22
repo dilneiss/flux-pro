@@ -16,6 +16,10 @@ const selectedPreset = ref(MARKETPLACE_PRESETS[0]);
 const handleSelect = (preset) => {
   selectedPreset.value = preset;
 };
+const handleDirectApply = (preset) => {
+  selectedPreset.value = preset;
+  handleApply();
+};
 
 const handleApply = () => {
   if (selectedPreset.value) {
@@ -61,6 +65,7 @@ const handleApply = () => {
             v-for="preset in MARKETPLACE_PRESETS"
             :key="preset.id"
             @click="handleSelect(preset)"
+            @dblclick="handleDirectApply(preset)"
             :class="
               selectedPreset?.id === preset.id
                 ? 'border-cyan-400 bg-cyan-950/30 shadow-[0_0_15px_rgba(6,182,212,0.15)]'
@@ -72,9 +77,18 @@ const handleApply = () => {
               <span class="text-[10px] uppercase font-bold text-cyan-400 tracking-wider">
                 {{ preset.category }}
               </span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">
-                {{ preset.price }}
-              </span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">
+                  {{ preset.price }}
+                </span>
+                <button
+                  @click.stop="handleDirectApply(preset)"
+                  class="px-2 py-0.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded text-[10px] shadow transition"
+                  title="Carregar este template no canvas com 1 clique"
+                >
+                  ⚡ Carregar
+                </button>
+              </div>
             </div>
             <div class="text-xs font-bold text-white">{{ preset.name }}</div>
             <div class="text-[11px] text-slate-400 font-sans line-clamp-1 mt-0.5">{{ preset.tagline }}</div>

@@ -7,6 +7,7 @@ import { useAiDirector } from '@/composables/useAiDirector';
 import { useShortcuts } from '@/composables/useShortcuts';
 import { useScreenRecorder } from '@/composables/useScreenRecorder';
 import { useElevenLabs } from '@/composables/useElevenLabs';
+import { useKeyframePlayback } from '@/composables/useKeyframePlayback';
 
 import {
   DEFAULT_META,
@@ -112,6 +113,8 @@ const {
   toggleLiveRecording,
   togglePresenting
 } = useScenes(DEFAULT_SCENES);
+const keyframePlayback = useKeyframePlayback(scenes, currentSceneIndex, activateScene);
+
 
 const { aiPromptText, generateGraph } = useAiDirector();
 
@@ -121,6 +124,7 @@ const screenRecorder = useScreenRecorder();
 const handleToggleRecordScreen = async () => {
   if (screenRecorder.isRecording.value) {
     screenRecorder.stopRecording();
+    keyframePlayback.stopPlayback();
     isPresenting.value = false;
   } else {
     isPresenting.value = true;
@@ -271,6 +275,16 @@ const handlePasteImage = (blobUrl, file) => {
 useShortcuts({
   onNextScene: () => nextScene(camera),
   onPrevScene: () => prevScene(camera),
+  onTogglePlay: () => keyframePlayback.togglePlayback(camera),
+  onEscape: () => {
+    if (screenRecorder.isRecording.value) {
+      screenRecorder.stopRecording();
+      keyframePlayback.stopPlayback();
+      isPresenting.value = false;
+    } else if (isPresenting.value) {
+      isPresenting.value = false;
+    }
+  },
   onDeleteSelected: () => {
     if (selectedNode.value) deleteSelectedNode();
     else if (selectedEdge.value) deleteSelectedEdge();
@@ -383,6 +397,8 @@ onUnmounted(() => {
         :edge-count="edges.length"
         @prev-scene="() => prevScene(camera)"
         @next-scene="() => nextScene(camera)"
+        :is-playing-keyframes="keyframePlayback.isPlayingKeyframes.value"
+        @toggle-play="() => keyframePlayback.togglePlayback(camera)"
       />
     </main>
 
@@ -418,5 +434,43 @@ onUnmounted(() => {
       :project="{ meta: presentationMeta, nodes, edges, scenes }"
       @close="isRenderOpen = false"
     />
+
+    <!-- Floating Recording HUD (discreet pill during live 60fps recording) -->
+    <div
+      v-if="screenRecorder.isRecording.value"
+      class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#0c1017]/95 border border-rose-500/60 shadow-[0_0_35px_rgba(244,63,94,0.4)] px-5 py-2.5 rounded-full flex items-center gap-4 backdrop-blur-md font-mono text-xs text-white"
+    >
+      <!-- Live Recording Dot + Timer -->
+      <div class="flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-rose-500 animate-pulse"></span>
+        <span class="font-bold text-rose-300">REC {{ screenRecorder.formatDuration(screenRecorder.recordingDuration.value) }}</span>
+        <span class="px-1.5 py-0.5 rounded bg-rose-950/80 border border-rose-700/60 text-rose-200 text-[10px] font-bold">60 FPS</span>
+      </div>
+
+      <div class="h-4 w-px bg-slate-700"></div>
+
+      <!-- Keyframe status -->
+      <div class="text-[11px] text-slate-300">
+        Keyframe <span class="text-cyan-400 font-bold">{{ currentSceneIndex + 1 }}</span>/{{ scenes.length }}
+      </div>
+
+      <!-- Play / Pause automated keyframe presentation -->
+      <button
+        @click="keyframePlayback.togglePlayback(camera)"
+        class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] flex items-center gap-1 transition"
+        title="Play / Pause Apresentação (Barra de Espaço)"
+      >
+        <span>{{ keyframePlayback.isPlayingKeyframes.value ? '⏸ Pausar' : '▶ Play (Espaço)' }}</span>
+      </button>
+
+      <!-- Stop and Download WebM -->
+      <button
+        @click="handleToggleRecordScreen"
+        class="px-3.5 py-1 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] shadow-lg flex items-center gap-1.5 transition"
+      >
+        <span>⏹</span>
+        <span>Parar e Baixar .webm</span>
+      </button>
+    </div>
   </div>
 </template>

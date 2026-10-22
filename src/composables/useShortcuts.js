@@ -3,6 +3,8 @@ import { onMounted, onUnmounted } from 'vue';
 export function useShortcuts({
   onNextScene,
   onPrevScene,
+  onTogglePlay,
+  onEscape,
   onDeleteSelected,
   onUndo,
   onRedo,
@@ -24,6 +26,12 @@ export function useShortcuts({
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       onPrevScene?.();
+    } else if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      onTogglePlay?.();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onEscape?.();
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
       onDeleteSelected?.();
