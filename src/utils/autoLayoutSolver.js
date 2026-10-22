@@ -8,7 +8,7 @@ export const GRID = 24;
  * Guarantees:
  * 1. ZERO node collisions (dynamic column widths based on actual node dimensions).
  * 2. Topological/Flow-aware column placement (Inputs -> Agents -> Results/Code).
- * 3. Vertical clustering for bottom->top connections (natural vertical chains).
+ * 3. Vertical chain integrity (nodes connected vertically bottom->top are kept strictly contiguous).
  * 4. Automatic cable port correction so wires never loop backward through cards.
  * 5. Strict 24px grid alignment.
  *
@@ -22,8 +22,8 @@ export function solveAutoLayout(nodes, edges, options = {}) {
 
   const startX = options.startX ?? 96;
   const startY = options.startY ?? 120;
-  const gapX = options.gapX ?? 144; // Generous horizontal corridor for Manhattan wires and badges
-  const gapY = options.gapY ?? 96;  // Vertical space between stacked cards
+  const gapX = options.gapX ?? 120; // Clean horizontal corridor between columns
+  const gapY = options.gapY ?? 80;  // Vertical space between stacked cards
 
   const clonedNodes = JSON.parse(JSON.stringify(nodes));
   const clonedEdges = JSON.parse(JSON.stringify(edges || []));
@@ -31,7 +31,6 @@ export function solveAutoLayout(nodes, edges, options = {}) {
   const nodeMap = new Map();
   clonedNodes.forEach((n) => nodeMap.set(n.id, n));
 
-  // Determine graph structure:
   // 1. Build adjacency list of incoming and outgoing edges
   const inEdges = new Map();
   const outEdges = new Map();
@@ -46,8 +45,7 @@ export function solveAutoLayout(nodes, edges, options = {}) {
   });
 
   // 2. Identify vertical pairs:
-  // A vertical pair is an edge where fromPort is bottom and toPort is top (or vice-versa),
-  // indicating one card is directly on top of the other.
+  // An edge with fromPort: bottom and toPort: top (or vice-versa) binds two cards vertically
   const verticalParentOf = new Map(); // childId -> parentId
   const verticalChildOf = new Map();  // parentId -> childId
 
@@ -60,8 +58,6 @@ export function solveAutoLayout(nodes, edges, options = {}) {
       const parentId = edge.fromPort === 'bottom' ? edge.from : edge.to;
       const childId = edge.fromPort === 'bottom' ? edge.to : edge.from;
 
-      // Only assign if parent does not already have a vertical child
-      // and child does not already have a vertical parent
       if (!verticalChildOf.has(parentId) && !verticalParentOf.has(childId)) {
         verticalParentOf.set(childId, parentId);
         verticalChildOf.set(parentId, childId);
@@ -70,15 +66,13 @@ export function solveAutoLayout(nodes, edges, options = {}) {
   });
 
   // 3. Compute topological column for each node
-  // Forward pass: compute longest horizontal distance
   const colIndex = new Map();
 
-  // Root nodes have no horizontal incoming edges (or no incoming edges)
   clonedNodes.forEach((node) => {
     colIndex.set(node.id, 0);
   });
 
-  // Relax horizontal edges across multiple passes to handle DAG depth
+  // Relax horizontal edges across multiple passes to compute longest DAG depth
   for (let pass = 0; pass < clonedNodes.length; pass++) {
     let changed = false;
     clonedEdges.forEach((edge) => {
@@ -109,7 +103,7 @@ export function solveAutoLayout(nodes, edges, options = {}) {
     if (!changed) break;
   }
 
-  // If a node is a vertical parent/child, sync their column strictly
+  // Ensure vertical parent and child are strictly in the same column
   clonedNodes.forEach((node) => {
     const childId = verticalChildOf.get(node.id);
     if (childId) {
@@ -128,18 +122,49 @@ export function solveAutoLayout(nodes, edges, options = {}) {
     columns[col].push(node);
   });
 
-  // Sort nodes vertically within each column:
-  // If node A is parent of node B (verticalChildOf), node A must come BEFORE node B
-  columns.forEach((colNodes) => {
-    colNodes.sort((a, b) => {
-      if (verticalChildOf.get(a.id) === b.id) return -1;
-      if (verticalChildOf.get(b.id) === a.id) return 1;
-      // In-degree ordering
-      return (inEdges.get(a.id)?.length || 0) - (inEdges.get(b.id)?.length || 0);
+  // 4. Sort nodes vertically within each column with CHAIN INTEGRITY:
+  // Nodes in a vertical chain [parent, child] MUST remain strictly contiguous!
+  // Standalone nodes are placed after the contiguous chains to avoid wires slicing through them.
+  columns.forEach((colNodes, c) => {
+    const visited = new Set();
+    const orderedNodes = [];
+
+    // First: insert complete contiguous vertical chains
+    colNodes.forEach((node) => {
+      if (verticalChildOf.has(node.id) && !verticalParentOf.has(node.id)) {
+        let curr = node;
+        while (curr && !visited.has(curr.id)) {
+          visited.add(curr.id);
+          orderedNodes.push(curr);
+          const childId = verticalChildOf.get(curr.id);
+          curr = childId ? colNodes.find((n) => n.id === childId) : null;
+        }
+      }
     });
+
+    // Second: any other nodes that have connected edges
+    colNodes.forEach((node) => {
+      if (
+        !visited.has(node.id) &&
+        (inEdges.get(node.id)?.length > 0 || outEdges.get(node.id)?.length > 0)
+      ) {
+        visited.add(node.id);
+        orderedNodes.push(node);
+      }
+    });
+
+    // Third: standalone unattached nodes placed safely at the bottom
+    colNodes.forEach((node) => {
+      if (!visited.has(node.id)) {
+        visited.add(node.id);
+        orderedNodes.push(node);
+      }
+    });
+
+    columns[c] = orderedNodes;
   });
 
-  // 4. Calculate dynamic column widths (strict max of all nodes in that column)
+  // 5. Calculate dynamic column widths (strict max of all nodes in that column)
   const colWidths = columns.map((colNodes) => {
     if (!colNodes.length) return 384;
     return Math.max(...colNodes.map((n) => n.w || 384));
@@ -153,7 +178,7 @@ export function solveAutoLayout(nodes, edges, options = {}) {
     colStartX.push(prevX + prevW + gapX);
   }
 
-  // 5. Assign X and Y coordinates (collision-free & grid-aligned)
+  // 6. Assign X and Y coordinates (collision-free & grid-aligned)
   columns.forEach((colNodes, c) => {
     let currentY = startY;
     const colX = colStartX[c];
@@ -167,8 +192,7 @@ export function solveAutoLayout(nodes, edges, options = {}) {
     });
   });
 
-  // 6. Intelligent Port Auto-Correction
-  // Reorients ports to match the clean final layout so cables never loop backwards
+  // 7. Intelligent Port Auto-Correction
   clonedEdges.forEach((edge) => {
     const fromNode = nodeMap.get(edge.from);
     const toNode = nodeMap.get(edge.to);

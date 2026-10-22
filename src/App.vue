@@ -35,10 +35,18 @@ const canvasTheme = ref('theme-pcb');
 const isMarketplaceOpen = ref(false);
 const isAudioSyncOpen = ref(false);
 const isRenderOpen = ref(false);
-const isSpotlightActive = ref(true);
+const isSpotlightActive = ref(false);
 
 const activeNodeIds = computed(() => {
+  if (isPresenting.value) {
+    if (currentScene.value?.activeNodeIds?.length) {
+      return currentScene.value.activeNodeIds;
+    }
+    return null;
+  }
+
   if (!isSpotlightActive.value) return null;
+
   if (selectedNode.value) {
     const activeSet = new Set([selectedNode.value.id]);
     edges.value.forEach((e) => {
@@ -47,9 +55,7 @@ const activeNodeIds = computed(() => {
     });
     return Array.from(activeSet);
   }
-  if (currentScene.value?.activeNodeIds?.length) {
-    return currentScene.value.activeNodeIds;
-  }
+
   return null;
 });
 
@@ -168,9 +174,7 @@ const handleNodeDragStart = (e, node) => {
 
 // Canvas Pan / Node Drag coordination
 const handlePanMove = (e) => {
-  if (draggingNode.value) {
-    dragNode(e, camera.value);
-  } else if (isDraggingCanvas.value) {
+  if (isDraggingCanvas.value) {
     pan(e);
   }
 };
@@ -194,8 +198,11 @@ const handleCompleteWire = ({ node, port }) => {
 const handleAddNode = ({ type, variant, coords = null }) => {
   let spawnCoords = coords;
   if (!spawnCoords) {
-    const centerX = Math.round((700 - camera.value.x) / camera.value.zoom / 24) * 24;
-    const centerY = Math.round((450 - camera.value.y) / camera.value.zoom / 24) * 24;
+    const rect = document.getElementById('infinite-canvas-viewport')?.getBoundingClientRect();
+    const w = rect ? rect.width : 1200;
+    const h = rect ? rect.height : 800;
+    const centerX = Math.round((w / 2 - camera.value.x) / camera.value.zoom / 24) * 24;
+    const centerY = Math.round((h / 2 - camera.value.y) / camera.value.zoom / 24) * 24;
     spawnCoords = { x: centerX, y: centerY };
   }
   const newNode = addNode(type, variant, camera.value, spawnCoords);

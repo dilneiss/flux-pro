@@ -76,8 +76,12 @@ const emit = defineEmits([
   'upload-media'
 ]);
 
-const canvasContainerRef = ref(null);
 const isCanvasDragOver = ref(false);
+
+const getViewportRect = () => {
+  const el = document.getElementById('infinite-canvas-viewport');
+  return el ? el.getBoundingClientRect() : { left: 0, top: 0, width: 1440, height: 900 };
+};
 
 const onCanvasDragOver = (e) => {
   if (e.dataTransfer?.types?.includes('application/json')) {
@@ -86,8 +90,11 @@ const onCanvasDragOver = (e) => {
   }
 };
 
-const onCanvasDragLeave = () => {
-  isCanvasDragOver.value = false;
+const onCanvasDragLeave = (e) => {
+  // Only unset if leaving canvas container
+  if (e.target.id === 'infinite-canvas-viewport') {
+    isCanvasDragOver.value = false;
+  }
 };
 
 const onCanvasDrop = (e) => {
@@ -98,11 +105,9 @@ const onCanvasDrop = (e) => {
   try {
     const data = JSON.parse(raw);
     if (data.type) {
-      const rect = canvasContainerRef.value?.getBoundingClientRect();
-      const rx = rect ? rect.left : 0;
-      const ry = rect ? rect.top : 0;
-      const worldX = Math.round(((e.clientX - rx - props.camera.x) / props.camera.zoom) / 24) * 24;
-      const worldY = Math.round(((e.clientY - ry - props.camera.y) / props.camera.zoom) / 24) * 24;
+      const rect = getViewportRect();
+      const worldX = Math.round(((e.clientX - rect.left - props.camera.x) / props.camera.zoom) / 24) * 24;
+      const worldY = Math.round(((e.clientY - rect.top - props.camera.y) / props.camera.zoom) / 24) * 24;
 
       emit('drop-node', {
         type: data.type,
@@ -111,7 +116,7 @@ const onCanvasDrop = (e) => {
       });
     }
   } catch {
-    // ignore non-json drops
+    // ignore
   }
 };
 
@@ -122,50 +127,37 @@ const onMouseDown = (e) => {
 };
 
 const onMouseMove = (e) => {
-  const rect = canvasContainerRef.value?.getBoundingClientRect();
-  if (!rect) return;
-
-  const worldX = (e.clientX - rect.left - props.camera.x) / props.camera.zoom;
-  const worldY = (e.clientY - rect.top - props.camera.y) / props.camera.zoom;
-
   if (props.activeWire) {
+    const rect = getViewportRect();
+    const worldX = (e.clientX - rect.left - props.camera.x) / props.camera.zoom;
+    const worldY = (e.clientY - rect.top - props.camera.y) / props.camera.zoom;
     emit('update-wire', { x: worldX, y: worldY });
     return;
   }
 
-  if (props.draggingNode) {
-    emit('pan', e);
-  } else if (props.isDraggingCanvas) {
+  if (props.isDraggingCanvas) {
     emit('pan', e);
   }
 };
 
 const onMouseUp = () => {
-  if (props.draggingNode || props.isDraggingCanvas || props.activeWire) {
+  if (props.isDraggingCanvas || props.activeWire) {
     emit('end-pan');
   }
 };
 
-const onWindowMouseMove = (e) => {
-  if (props.draggingNode || props.isDraggingCanvas || props.activeWire) {
-    onMouseMove(e);
-  }
-};
-
 onMounted(() => {
-  window.addEventListener('mousemove', onWindowMouseMove);
   window.addEventListener('mouseup', onMouseUp);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('mousemove', onWindowMouseMove);
   window.removeEventListener('mouseup', onMouseUp);
 });
 </script>
 
 <template>
   <div
-    ref="canvasContainerRef"
+    id="infinite-canvas-viewport"
     :class="[
       'flex-1 relative overflow-hidden select-none',
       isDraggingCanvas ? 'cursor-grabbing' : 'cursor-grab',
@@ -186,9 +178,10 @@ onUnmounted(() => {
       class="absolute inset-0 z-50 pointer-events-none bg-cyan-950/20 border-2 border-dashed border-cyan-400 flex items-center justify-center font-mono text-cyan-300 text-sm backdrop-blur-[1px]"
     >
       <span class="bg-slate-900/95 px-4 py-2.5 rounded-lg border border-cyan-500 shadow-2xl flex items-center gap-2">
-        <span class="text-lg">📍</span> Solte aqui para posicionar o bloco neste ponto
+        <span class="text-lg">📍</span> Solte aqui para posicionar o bloco
       </span>
     </div>
+
     <!-- World Transform Container -->
     <div
       :class="{
@@ -219,9 +212,9 @@ onUnmounted(() => {
         :is-selected="selectedNode?.id === node.id"
         :is-presenting="isPresenting"
         :active-wire-source-id="activeWire?.fromId"
-        @drag-start="(e, n) => emit('node-drag-start', e, n)"
         :is-spotlight-active="isSpotlightActive"
         :active-node-ids="activeNodeIds"
+        @drag-start="(e, n) => emit('node-drag-start', e, n)"
         @drag-end="() => emit('end-pan')"
         @select="(n) => emit('node-select', n)"
         @start-wire="({ node: n, port }) => emit('start-wire', { node: n, port })"
