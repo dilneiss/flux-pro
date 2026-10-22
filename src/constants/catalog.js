@@ -198,6 +198,19 @@ export const NODE_CATALOG = [
       { id: 'proof', label: 'Evidência' },
       { id: 'note', label: 'Nota' }
     ]
+  },
+  {
+    type: 'question',
+    name: 'Pergunta / Caminhos',
+    icon: '🔀',
+    color: 'text-fuchsia-400',
+    desc: 'Ramificação condicional e múltiplos caminhos',
+    defaultHeight: 180,
+    variants: [
+      { id: 'binary', label: 'Sim / Não' },
+      { id: 'multi', label: 'Multi-Caminhos' },
+      { id: 'router', label: 'Roteador IA' }
+    ]
   }
 ];
 
@@ -298,6 +311,13 @@ export const NODE_TEMPLATES = {
     badge: 'Importante',
     w: 336,
     content: 'Nenhuma linha de código proprietário foi copiada durante a observação.'
+  },
+  question: {
+    title: 'O usuário possui assinatura ativa?',
+    subtitle: 'PERGUNTA CONDICIONAL',
+    badge: 'Multi-Branch',
+    w: 408,
+    content: '*Sim ➔ Liberar Acesso 4K (60fps)\nNão ➔ Redirecionar para Checkout\nTrial ➔ Exibir Alerta de Renovação'
   }
 };
 
@@ -352,6 +372,9 @@ export function estimateNodeHeight(node) {
     case 'compare':
       return 130;
     case 'callout':
+      return 76 + Math.max(1, lines) * 18;
+    case 'question':
+      return 88 + Math.max(2, lines) * 28;
     default:
       return 76 + Math.max(1, lines) * 18;
   }

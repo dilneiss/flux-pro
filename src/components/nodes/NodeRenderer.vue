@@ -15,6 +15,7 @@ import HardwareNode from './HardwareNode.vue';
 import DecisionNode from './DecisionNode.vue';
 import CompareNode from './CompareNode.vue';
 import CalloutNode from './CalloutNode.vue';
+import QuestionNode from './QuestionNode.vue';
 
 const props = defineProps({
   node: {
@@ -44,7 +45,8 @@ const componentsMap = {
   hardware: HardwareNode,
   decision: DecisionNode,
   compare: CompareNode,
-  callout: CalloutNode
+  callout: CalloutNode,
+  question: QuestionNode
 };
 
 const currentComponent = computed(() => {

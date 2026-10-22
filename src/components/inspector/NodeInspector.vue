@@ -189,6 +189,42 @@ const badgePresets = ['alvo', '[ok]', '60 fps', 'online', 'ativo', 'diff', 'Post
           <img :src="node.mediaUrl" alt="Preview" class="w-full h-full object-cover" />
         </div>
       </div>
+      <!-- Multi-branch Question Helpers -->
+      <div v-if="node.type === 'question'" class="p-2.5 rounded bg-fuchsia-950/30 border border-fuchsia-800/50 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] text-fuchsia-300 font-bold flex items-center gap-1">
+            <span>🔀</span> Presets de Ramificação
+          </span>
+          <span class="text-[9px] text-slate-400">Clique para aplicar</span>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5 text-[9px]">
+          <button
+            @click="node.content = '*Sim ➔ Liberar Acesso 60fps\nNão ➔ Redirecionar Checkout'"
+            class="p-1.5 rounded bg-slate-900 border border-slate-800 hover:border-fuchsia-500 text-left text-slate-300 transition"
+          >
+            ✓ Sim / Não (2 vias)
+          </button>
+          <button
+            @click="node.content = '*Pro ➔ 4K ProRes (Ilimitado)\nFree ➔ 720p (3 exports)\nTrial ➔ Upgrade Pendente'"
+            class="p-1.5 rounded bg-slate-900 border border-slate-800 hover:border-fuchsia-500 text-left text-slate-300 transition"
+          >
+            ★ Planos (3 vias)
+          </button>
+          <button
+            @click="node.content = '*Aprovado ➔ Prosseguir Deploy\nRejeitado ➔ Notificar Autor\nRevisão ➔ Abrir Issue'"
+            class="p-1.5 rounded bg-slate-900 border border-slate-800 hover:border-fuchsia-500 text-left text-slate-300 transition"
+          >
+            ⚖ Status (3 vias)
+          </button>
+          <button
+            @click="node.content = '*Pergunta Técnica ➔ REA Ghidra\nPergunta Jurídica ➔ Compliance\nOutro ➔ Fallback LLM'"
+            class="p-1.5 rounded bg-slate-900 border border-slate-800 hover:border-fuchsia-500 text-left text-slate-300 transition"
+          >
+            🤖 Roteador IA
+          </button>
+        </div>
+      </div>
+
 
       <div>
         <div class="flex items-center justify-between mb-1">

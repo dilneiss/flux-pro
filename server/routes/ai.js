@@ -17,7 +17,8 @@ const VALID_TYPES = [
   'hardware',
   'decision',
   'compare',
-  'callout'
+  'callout',
+  'question'
 ];
 
 router.post('/parse-script', (req, res) => {

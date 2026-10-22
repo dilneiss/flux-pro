@@ -210,6 +210,26 @@ defineProps({
       </div>
     </template>
 
+    <!-- 16. PERGUNTA / MULTI-CAMINHOS -->
+    <template v-else-if="type === 'question'">
+      <div class="h-full w-full rounded bg-[#130d1e] border border-fuchsia-500/40 p-1 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-[7px] text-fuchsia-300 font-bold border-b border-fuchsia-900/40 pb-0.5">
+          <span class="flex items-center gap-1">🔀 Pergunta</span>
+          <span class="bg-fuchsia-950 px-1 rounded text-fuchsia-400">3 saídas</span>
+        </div>
+        <div class="space-y-0.5">
+          <div class="flex items-center justify-between bg-emerald-950/40 text-[7px] px-1 rounded text-emerald-300">
+            <span>● Sim</span>
+            <span>➔ 60fps</span>
+          </div>
+          <div class="flex items-center justify-between bg-rose-950/40 text-[7px] px-1 rounded text-rose-300">
+            <span>● Não</span>
+            <span>➔ Checkout</span>
+          </div>
+        </div>
+      </div>
+    </template>
+
     <!-- 15. CALLOUT -->
     <template v-else>
       <div class="h-full w-full rounded bg-amber-950/20 border border-amber-500/50 p-1.5 flex flex-col justify-between">
