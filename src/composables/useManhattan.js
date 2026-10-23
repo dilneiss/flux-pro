@@ -1,7 +1,11 @@
-import { estimateNodeHeight } from '@/constants/catalog';
+import { estimateNodeHeight } from '../constants/catalog.js';
+
+export const GRID = 24;
 
 /**
  * Calculates the exact (x, y) coordinates for a node's magnetic port.
+ * Uses real DOM measurements if available, with robust fallback.
+ *
  * @param {Object} node - Node object with { x, y, w, type, content }
  * @param {'top' | 'right' | 'bottom' | 'left'} [port='right']
  * @returns {{ x: number, y: number }}
@@ -33,9 +37,48 @@ export function getPortCoords(node, port = 'right') {
 }
 
 /**
+ * Calculates the optimal, most natural port pairing between two nodes
+ * based on their relative geometric positions on the canvas.
+ *
+ * @param {Object} sourceNode
+ * @param {Object} targetNode
+ * @returns {{ fromPort: 'top'|'right'|'bottom'|'left', toPort: 'top'|'right'|'bottom'|'left' }}
+ */
+export function getOptimalEdgePorts(sourceNode, targetNode) {
+  if (!sourceNode || !targetNode) return { fromPort: 'right', toPort: 'left' };
+
+  const srcW = sourceNode.w || 384;
+  const srcH = sourceNode.customHeight || estimateNodeHeight(sourceNode);
+  const tgtW = targetNode.w || 384;
+  const tgtH = targetNode.customHeight || estimateNodeHeight(targetNode);
+
+  const srcCenter = { x: sourceNode.x + srcW / 2, y: sourceNode.y + srcH / 2 };
+  const tgtCenter = { x: targetNode.x + tgtW / 2, y: targetNode.y + tgtH / 2 };
+
+  const dx = tgtCenter.x - srcCenter.x;
+  const dy = tgtCenter.y - srcCenter.y;
+
+  // Preference for clean horizontal pipeline between columns
+  if (Math.abs(dx) >= Math.abs(dy) * 0.7 || Math.abs(dx) > srcW * 0.6) {
+    if (dx > 0) {
+      return { fromPort: 'right', toPort: 'left' };
+    } else {
+      return { fromPort: 'left', toPort: 'right' };
+    }
+  }
+
+  // Mostly vertical stacked in the same column
+  if (dy > 0) {
+    return { fromPort: 'bottom', toPort: 'top' };
+  } else {
+    return { fromPort: 'top', toPort: 'bottom' };
+  }
+}
+
+/**
  * Robust 90° Manhattan Orthogonal Router with multi-lane track offsets.
- * Strictly guarantees clean horizontal and vertical PCB trace segments
- * and separates parallel tracks into dedicated lanes (-28px, 0px, +28px).
+ * Strictly guarantees clean horizontal and vertical PCB trace segments,
+ * separates parallel tracks into dedicated lanes, and routes through open corridors.
  *
  * @param {Object} edge - Edge with { from, fromPort, to, toPort }
  * @param {(id: string) => Object | undefined} getNodeById
@@ -97,11 +140,11 @@ export function computeSmartManhattanPath(edge, getNodeById, edgeIndex = 0) {
   // 4. Opposing horizontal ports (right -> left, left -> right)
   if ((fromPort === 'right' && toPort === 'left') || (fromPort === 'left' && toPort === 'right')) {
     if ((fromPort === 'right' && p1.x <= p2.x) || (fromPort === 'left' && p1.x >= p2.x)) {
-      // Natural forward flow with multi-lane track offset
+      // Natural forward flow with multi-lane track offset through the central corridor
       const midX = (p1.x + p2.x) / 2 + laneOffset;
       return `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${p2.y} L ${p2.x} ${p2.y}`;
     } else {
-      // Backwards horizontal flow: requires vertical bypass
+      // Backwards horizontal flow: requires vertical bypass through open corridor
       const stepX = fromPort === 'right' ? p1.x + STUB : p1.x - STUB;
       const bypassY = Math.max(p1.y, p2.y) + 48 + Math.abs(laneOffset);
       const stepX2 = toPort === 'left' ? p2.x - STUB : p2.x + STUB;
@@ -111,23 +154,57 @@ export function computeSmartManhattanPath(edge, getNodeById, edgeIndex = 0) {
 
   // 5. Perpendicular (Right/Left -> Top/Bottom)
   if (fromPort === 'right' || fromPort === 'left') {
-    const stubX = fromPort === 'right' ? p1.x + STUB : p1.x - STUB;
-    if ((toPort === 'top' && p2.y >= p1.y) || (toPort === 'bottom' && p2.y <= p1.y)) {
-      return `M ${p1.x} ${p1.y} L ${p2.x} ${p1.y} L ${p2.x} ${p2.y}`;
-    } else {
-      const stepY = toPort === 'top' ? p2.y - STUB : p2.y + STUB;
-      return `M ${p1.x} ${p1.y} L ${stubX} ${p1.y} L ${stubX} ${stepY} L ${p2.x} ${stepY} L ${p2.x} ${p2.y}`;
+    const isRight = fromPort === 'right';
+    const midX = Math.round((p1.x + p2.x) / 2) + laneOffset;
+
+    if (toPort === 'top') {
+      if (p2.y >= p1.y) {
+        // Target is below: exit horizontal to p2.x, then vertical into top port
+        return `M ${p1.x} ${p1.y} L ${p2.x} ${p1.y} L ${p2.x} ${p2.y}`;
+      } else {
+        // Target is above: route vertical leg through midX corridor
+        const safeX = isRight && p2.x > p1.x ? midX : (isRight ? p1.x + STUB : p1.x - STUB);
+        const stepY = p2.y - STUB;
+        return `M ${p1.x} ${p1.y} L ${safeX} ${p1.y} L ${safeX} ${stepY} L ${p2.x} ${stepY} L ${p2.x} ${p2.y}`;
+      }
+    } else { // toPort === 'bottom'
+      if (p2.y <= p1.y) {
+        // Target is above: exit horizontal to p2.x, then vertical into bottom port
+        return `M ${p1.x} ${p1.y} L ${p2.x} ${p1.y} L ${p2.x} ${p2.y}`;
+      } else {
+        // Target is below: route vertical leg through midX corridor
+        const safeX = isRight && p2.x > p1.x ? midX : (isRight ? p1.x + STUB : p1.x - STUB);
+        const stepY = p2.y + STUB;
+        return `M ${p1.x} ${p1.y} L ${safeX} ${p1.y} L ${safeX} ${stepY} L ${p2.x} ${stepY} L ${p2.x} ${p2.y}`;
+      }
     }
   }
 
   // 6. Perpendicular (Top/Bottom -> Right/Left)
   if (fromPort === 'top' || fromPort === 'bottom') {
-    const stubY = fromPort === 'bottom' ? p1.y + STUB : p1.y - STUB;
-    if ((toPort === 'left' && p2.x >= p1.x) || (toPort === 'right' && p2.x <= p1.x)) {
-      return `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y} L ${p2.x} ${p2.y}`;
-    } else {
-      const stepX = toPort === 'left' ? p2.x - STUB : p2.x + STUB;
-      return `M ${p1.x} ${p1.y} L ${p1.x} ${stubY} L ${stepX} ${stubY} L ${stepX} ${p2.y} L ${p2.x} ${p2.y}`;
+    const isBottom = fromPort === 'bottom';
+    const midY = Math.round((p1.y + p2.y) / 2);
+
+    if (toPort === 'left') {
+      if (p2.x >= p1.x) {
+        // Target is to the right: exit vertical to p2.y, then horizontal into left port
+        return `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y} L ${p2.x} ${p2.y}`;
+      } else {
+        // Target is to the left: route horizontal leg through midY corridor
+        const safeY = isBottom && p2.y > p1.y ? midY : (isBottom ? p1.y + STUB : p1.y - STUB);
+        const stepX = p2.x - STUB;
+        return `M ${p1.x} ${p1.y} L ${p1.x} ${safeY} L ${stepX} ${safeY} L ${stepX} ${p2.y} L ${p2.x} ${p2.y}`;
+      }
+    } else { // toPort === 'right'
+      if (p2.x <= p1.x) {
+        // Target is to the left: exit vertical to p2.y, then horizontal into right port
+        return `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y} L ${p2.x} ${p2.y}`;
+      } else {
+        // Target is to the right: route horizontal leg through midY corridor
+        const safeY = isBottom && p2.y > p1.y ? midY : (isBottom ? p1.y + STUB : p1.y - STUB);
+        const stepX = p2.x + STUB;
+        return `M ${p1.x} ${p1.y} L ${p1.x} ${safeY} L ${stepX} ${safeY} L ${stepX} ${p2.y} L ${p2.x} ${p2.y}`;
+      }
     }
   }
 
@@ -205,11 +282,21 @@ export function getEdgeMidpoint(edge, getNodeById, edgeIndex = 0) {
     return { x: midX, y: midY };
   }
 
-  // Perpendicular connections
+  // Perpendicular connections (Right/Left -> Top/Bottom)
   if (fromPort === 'right' || fromPort === 'left') {
+    const midX = Math.round((p1.x + p2.x) / 2) + laneOffset;
     return {
-      x: Math.round(p2.x),
-      y: Math.round(p1.y)
+      x: midX,
+      y: Math.round((p1.y + p2.y) / 2)
+    };
+  }
+
+  // Perpendicular connections (Top/Bottom -> Right/Left)
+  if (fromPort === 'top' || fromPort === 'bottom') {
+    const midY = Math.round((p1.y + p2.y) / 2);
+    return {
+      x: Math.round((p1.x + p2.x) / 2),
+      y: midY
     };
   }
 

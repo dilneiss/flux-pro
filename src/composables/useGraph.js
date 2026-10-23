@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { NODE_TEMPLATES, estimateNodeHeight } from '@/constants/catalog';
 import { solveAutoLayout } from '@/utils/autoLayoutSolver';
+import { getOptimalEdgePorts } from './useManhattan.js';
 
 export const GRID = 24;
 
@@ -77,11 +78,16 @@ export function useGraph(initialNodes = [], initialEdges = []) {
     selectedNode.value = null;
     selectedEdge.value = null;
   };
+  let activeDragCleanup = null;
 
   const startDragNode = (e, node, cameraRef) => {
     if (e.button !== 0) return; // Only left click
     if (e.target && e.target.closest('button, input, select, textarea, a, .port-handle')) return;
     if (e.preventDefault) e.preventDefault();
+
+    if (activeDragCleanup) {
+      activeDragCleanup();
+    }
 
     selectNode(node);
     draggingNode.value = node;
@@ -90,30 +96,50 @@ export function useGraph(initialNodes = [], initialEdges = []) {
       ? cameraRef.value
       : cameraRef || { x: 0, y: 0, zoom: 1 };
 
-    dragOffset.value = {
-      x: (e.clientX - camera.x) / camera.zoom - node.x,
-      y: (e.clientY - camera.y) / camera.zoom - node.y
-    };
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    const startNodeX = node.x;
+    const startNodeY = node.y;
 
     const onGlobalMouseMove = (moveEvent) => {
-      if (!draggingNode.value) return;
+      if (!draggingNode.value || draggingNode.value.id !== node.id) {
+        onGlobalMouseUp();
+        return;
+      }
       if (moveEvent.buttons === 0) {
         onGlobalMouseUp();
         return;
       }
-      const rawX = (moveEvent.clientX - camera.x) / camera.zoom - dragOffset.value.x;
-      const rawY = (moveEvent.clientY - camera.y) / camera.zoom - dragOffset.value.y;
-      node.x = Math.round(rawX / GRID) * GRID;
-      node.y = Math.round(rawY / GRID) * GRID;
+      const dx = (moveEvent.clientX - startClientX) / camera.zoom;
+      const dy = (moveEvent.clientY - startClientY) / camera.zoom;
+      node.x = Math.round((startNodeX + dx) / GRID) * GRID;
+      node.y = Math.round((startNodeY + dy) / GRID) * GRID;
+
+      // Dynamically auto-adapt connected edge ports that are not manually locked!
+      edges.value.forEach((edge) => {
+        if (edge.from === node.id || edge.to === node.id) {
+          if (!edge.manualPorts) {
+            const src = getNodeById(edge.from);
+            const tgt = getNodeById(edge.to);
+            if (src && tgt) {
+              const optimal = getOptimalEdgePorts(src, tgt);
+              edge.fromPort = optimal.fromPort;
+              edge.toPort = optimal.toPort;
+            }
+          }
+        }
+      });
     };
 
     const onGlobalMouseUp = () => {
       window.removeEventListener('mousemove', onGlobalMouseMove);
       window.removeEventListener('mouseup', onGlobalMouseUp);
       window.removeEventListener('blur', onGlobalMouseUp);
+      activeDragCleanup = null;
       endDragNode();
     };
 
+    activeDragCleanup = onGlobalMouseUp;
     window.addEventListener('mousemove', onGlobalMouseMove, { passive: false });
     window.addEventListener('mouseup', onGlobalMouseUp);
     window.addEventListener('blur', onGlobalMouseUp);

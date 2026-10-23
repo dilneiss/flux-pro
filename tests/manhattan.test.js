@@ -3,7 +3,8 @@ import {
   getPortCoords,
   computeSmartManhattanPath,
   getEdgeMidpoint,
-  computeLiveWirePath
+  computeLiveWirePath,
+  getOptimalEdgePorts
 } from '../src/composables/useManhattan.js';
 
 describe('useManhattan Path Routing', () => {
@@ -91,5 +92,28 @@ describe('useManhattan Path Routing', () => {
     const path = computeLiveWirePath(activeWire, getNodeById);
     expect(path).toMatch(/^M \d+/);
     expect(path).toContain('400 250');
+  });
+
+  it('calculates optimal edge ports dynamically based on relative position', () => {
+    // Target to the right
+    const rightOptimal = getOptimalEdgePorts(nodeA, nodeB);
+    expect(rightOptimal.fromPort).toBe('right');
+    expect(rightOptimal.toPort).toBe('left');
+
+    // Target to the left
+    const leftOptimal = getOptimalEdgePorts(nodeB, nodeA);
+    expect(leftOptimal.fromPort).toBe('left');
+    expect(leftOptimal.toPort).toBe('right');
+
+    // Target directly below
+    const nodeBelow = { id: 'nc', x: 100, y: 400, w: 200, type: 'chip' };
+    const belowOptimal = getOptimalEdgePorts(nodeA, nodeBelow);
+    expect(belowOptimal.fromPort).toBe('bottom');
+    expect(belowOptimal.toPort).toBe('top');
+
+    // Target directly above
+    const aboveOptimal = getOptimalEdgePorts(nodeBelow, nodeA);
+    expect(aboveOptimal.fromPort).toBe('top');
+    expect(aboveOptimal.toPort).toBe('bottom');
   });
 });

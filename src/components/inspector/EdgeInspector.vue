@@ -107,6 +107,7 @@ const labelPresets = ['fluxo', 'pasta local', 'o Camera Hub', 'copia caminho', '
           <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Porta Saída</label>
           <select
             v-model="edge.fromPort"
+            @change="edge.manualPorts = true"
             class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
           >
             <option v-for="p in ports" :key="p.id" :value="p.id">{{ p.label }}</option>
@@ -117,6 +118,7 @@ const labelPresets = ['fluxo', 'pasta local', 'o Camera Hub', 'copia caminho', '
           <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Porta Entrada</label>
           <select
             v-model="edge.toPort"
+            @change="edge.manualPorts = true"
             class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
           >
             <option v-for="p in ports" :key="p.id" :value="p.id">{{ p.label }}</option>
