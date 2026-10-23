@@ -489,6 +489,7 @@ onUnmounted(() => {
         @toggle-aspect-ratio="handleToggleAspectRatio"
         @generate-thumbnail="handleGenerateThumbnail"
         @toggle-timeline="isTimelineOpen = !isTimelineOpen"
+        @start-direct-render="handleStartDirectRender"
       />
 
       <!-- Scene Header (Narrative HUD) -->

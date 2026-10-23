@@ -30,14 +30,34 @@ export function useScreenRecorder() {
     }
 
     try {
-      // Prompt user to select screen, window, or tab
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          frameRate: { ideal: 60, max: 60 },
-          displaySurface: 'browser'
-        },
-        audio: false
-      });
+      // Modern Chromium: preferCurrentTab & selfBrowserSurface guarantees pre-selecting current tab!
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            displaySurface: 'browser',
+            frameRate: { ideal: 60, max: 60 }
+          },
+          audio: {
+            suppressLocalAudioPlayback: false
+          },
+          preferCurrentTab: true,
+          selfBrowserSurface: 'include',
+          systemAudio: 'include',
+          surfaceSwitching: 'include'
+        });
+      } catch (innerErr) {
+        if (innerErr.name === 'NotAllowedError') throw innerErr;
+        // Fallback for older browsers
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            frameRate: { ideal: 60, max: 60 }
+          },
+          audio: true,
+          preferCurrentTab: true
+        });
+      }
+
       // Merge audio tracks from soundFX Master Mixer
       const tracks = [...stream.getVideoTracks()];
       const mixedAudioStream = soundFX.getMixedAudioStream();
@@ -50,18 +70,20 @@ export function useScreenRecorder() {
       const combinedStream = new MediaStream(tracks);
       mediaStream.value = combinedStream;
 
-      // Select supported mimeType
+      // Select supported mimeType (prioritize MP4 if supported)
       const mimeTypes = [
+        'video/mp4;codecs=avc1,mp4a.40.2',
+        'video/mp4',
         'video/webm;codecs=vp9,opus',
         'video/webm;codecs=vp8,opus',
-        'video/webm',
-        'video/mp4'
+        'video/webm'
       ];
       const selectedMime = mimeTypes.find((type) => MediaRecorder.isTypeSupported(type)) || 'video/webm';
+      const fileExt = selectedMime.includes('mp4') ? 'mp4' : 'webm';
 
       const recorder = new MediaRecorder(combinedStream, {
         mimeType: selectedMime,
-        videoBitsPerSecond: 12000000 // 12 Mbps for crystal-clear 1080p/4K
+        videoBitsPerSecond: 16000000 // 16 Mbps for crystal-clear 1080p/4K
       });
 
       recorder.ondataavailable = (event) => {
@@ -80,7 +102,7 @@ export function useScreenRecorder() {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `circuitflow-capture-${Date.now()}.webm`;
+          a.download = `circuitflow-capture-${Date.now()}.${fileExt}`;
           document.body.appendChild(a);
           a.click();
           setTimeout(() => {

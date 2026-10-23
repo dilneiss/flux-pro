@@ -84,7 +84,8 @@ const emit = defineEmits([
   'toggle-ghost-cursor',
   'toggle-aspect-ratio',
   'generate-thumbnail',
-  'toggle-timeline'
+  'toggle-timeline',
+  'start-direct-render'
 ]);
 </script>
 
@@ -116,7 +117,15 @@ const emit = defineEmits([
         class="px-3 py-1 rounded bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold transition shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center gap-1.5 animate-pulse"
         title="100% Automático: Grava tela a 60fps, move câmera, narra cada cena e baixa o vídeo pronto sozinho!"
       >
-        <span>⚡</span> Auto-Produzir Vídeo
+        <span>⚡</span> Auto-Produzir
+      </button>
+
+      <button
+        @click="emit('start-direct-render')"
+        class="px-2.5 py-1 rounded bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold transition shadow-[0_0_15px_rgba(16,185,129,0.35)] flex items-center gap-1 font-mono"
+        title="Renderizar MP4 Direto: captura a própria aba em 60 FPS com áudio, zero diálogos e zero popups!"
+      >
+        <span>🚀</span> MP4 Direto
       </button>
 
       <button
