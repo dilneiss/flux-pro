@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue';
+import { generateRemotionTsx } from '@/utils/remotionExporter';
 
 const props = defineProps({
   presentationMeta: {
@@ -19,6 +20,7 @@ const props = defineProps({
     required: true
   }
 });
+
 const emit = defineEmits(['open-render-modal']);
 
 const exportOutput = ref('');
@@ -46,26 +48,29 @@ const exportJson = () => {
 };
 
 const exportRemotion = () => {
-  const code = `// Remotion 60fps Composition Gerada por CircuitFlow Studio v2.0
-import { AbsoluteFill, useCurrentFrame, interpolate, spring } from 'remotion';
-
-export const CircuitFlowPresentation = () => {
-  const frame = useCurrentFrame();
-  const scenes = ${JSON.stringify(props.scenes, null, 2)};
-  const nodes = ${JSON.stringify(props.nodes, null, 2)};
-  const edges = ${JSON.stringify(props.edges, null, 2)};
-
-  return (
-    <AbsoluteFill style={{ backgroundColor: '#090b0e', color: '#e2e8f0', fontFamily: 'monospace' }}>
-      {/* CircuitFlow 60fps Vector Renderer */}
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        {/* Renderiza nós e conexões com interpolação de câmera */}
-      </div>
-    </AbsoluteFill>
-  );
-};
-`;
+  const code = generateRemotionTsx({
+    meta: props.presentationMeta,
+    scenes: props.scenes,
+    nodes: props.nodes,
+    edges: props.edges
+  });
   copyToClipboard(code, 'Componente Remotion (.tsx)');
+};
+
+const downloadRemotionFile = () => {
+  const code = generateRemotionTsx({
+    meta: props.presentationMeta,
+    scenes: props.scenes,
+    nodes: props.nodes,
+    edges: props.edges
+  });
+  const blob = new Blob([code], { type: 'text/typescript' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `CircuitFlowComposition.tsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 };
 
 const downloadJsonFile = () => {
@@ -91,49 +96,64 @@ const downloadJsonFile = () => {
       <span>📦</span> Pipeline de Exportação Comercial
     </div>
 
-    <p class="text-[11px] text-slate-400 leading-relaxed">
-      Exporte a estrutura visual como AST JSON para salvar, ou gere um componente nativo para <b>Remotion (React 60fps)</b> pronto para renderizar vídeos cinematográficos com câmera contínua.
+    <p class="text-[11px] text-slate-400 leading-relaxed font-sans">
+      Exporte a estrutura visual como AST JSON ou gere o componente nativo <b>Remotion 4K (.tsx)</b> com interpolação de câmera em 60fps para renderização via backend.
     </p>
 
     <div class="space-y-2 font-mono">
       <button
-        @click="exportJson"
-        class="w-full py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded transition flex items-center justify-center gap-2"
-      >
-        <span>📋</span> Copiar AST JSON Completo
-      </button>
-
-      <button
         @click="exportRemotion"
-        class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded transition flex items-center justify-center gap-2"
+        class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg transition flex items-center justify-center gap-2 shadow-lg"
       >
         <span>⚛️</span> Gerar Componente Remotion (.tsx)
       </button>
 
       <button
-        @click="emit('open-render-modal')"
-        class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded transition flex items-center justify-center gap-2 shadow-lg"
+        @click="downloadRemotionFile"
+        class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40 rounded-lg transition flex items-center justify-center gap-2"
       >
-        <span>🚀</span> Renderizar MP4 4K (Remotion + RabbitMQ)
+        <span>💾</span> Baixar CircuitFlowComposition.tsx
+      </button>
+
+      <button
+        @click="exportJson"
+        class="w-full py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg transition flex items-center justify-center gap-2"
+      >
+        <span>📋</span> Copiar AST JSON Completo
       </button>
 
       <button
         @click="downloadJsonFile"
-        class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded transition flex items-center justify-center gap-2"
+        class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition flex items-center justify-center gap-2"
       >
-        <span>💾</span> Baixar Arquivo .json
+        <span>📄</span> Baixar Arquivo .json
+      </button>
+
+      <button
+        @click="emit('open-render-modal')"
+        class="w-full py-2.5 bg-cyan-500/10 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-bold rounded-lg transition flex items-center justify-center gap-2"
+      >
+        <span>🚀</span> Renderizar MP4 4K (Remotion Headless Queue)
       </button>
     </div>
 
     <!-- Feedback Message -->
-    <div v-if="feedbackMsg" class="p-2 bg-emerald-950/40 border border-emerald-700/60 rounded text-[11px] text-emerald-300 font-mono">
+    <div v-if="feedbackMsg" class="p-2.5 bg-emerald-950/60 border border-emerald-500/60 rounded-lg text-[11px] text-emerald-300 font-mono shadow">
       {{ feedbackMsg }}
     </div>
 
     <!-- Output preview -->
-    <div v-if="exportOutput" class="space-y-1 pt-2 border-t border-slate-800 font-mono">
-      <div class="text-[10px] text-cyan-400 font-bold">Prévia do Código:</div>
-      <pre class="p-2.5 bg-black border border-slate-800 rounded text-[10px] text-cyan-300 max-h-64 overflow-auto leading-relaxed select-all">{{ exportOutput }}</pre>
+    <div v-if="exportOutput" class="space-y-1.5 pt-2 border-t border-slate-800 font-mono">
+      <div class="text-[10px] text-cyan-400 font-bold flex items-center justify-between">
+        <span>Prévia do Código Remotion TSX:</span>
+        <button
+          @click="exportOutput = ''"
+          class="text-slate-500 hover:text-slate-300"
+        >
+          ocultar
+        </button>
+      </div>
+      <pre class="p-3 bg-black border border-slate-800 rounded-lg text-[10px] text-cyan-300 max-h-64 overflow-auto leading-relaxed select-all">{{ exportOutput }}</pre>
     </div>
   </div>
 </template>
