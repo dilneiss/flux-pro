@@ -394,5 +394,183 @@ export const MARKETPLACE_PRESETS = [
       { name: 'testes', title: 'Validação Automatizada com Vitest', subtitle: 'Bateria de testes provando zero regressão', x: -420, y: 72, zoom: 1.15, startTime: 10.0, activeNodeIds: ['n_cd_3'] },
       { name: 'deploy', title: 'Deploy Contínuo sem Queda', subtitle: 'Ambiente de produção estabilizado a 60fps', x: -420, y: -140, zoom: 1.2, startTime: 14.5, activeNodeIds: ['n_cd_4'] }
     ]
+  },
+  // 6. Hubiss Dropshipping & Automação de Pedidos
+  {
+    id: 'hubiss-dropshipping-flow',
+    name: 'Hubiss Dropshipping & Automação',
+    tagline: 'Catálogo do Fornecedor ▸ Publicação Mercado Livre/Shopee ▸ Webhook Venda ▸ Split & Pagamento Automático Asaas ▸ Expedição e Lucro',
+    category: 'Dropshipping & E-commerce',
+    badge: 'Hubiss Oficial',
+    price: 'R$ 297',
+    stars: 5.0,
+    author: 'Hubiss Engine',
+    meta: {
+      project: 'hubiss-dropshipping',
+      slug: 'hubiss-flow',
+      author: 'hubiss'
+    },
+    theme: 'theme-pcb',
+    nodes: [
+      {
+        id: 'n_hb_1',
+        type: 'chip',
+        variant: 'amber',
+        groupLabel: '01. catálogo do fornecedor',
+        title: 'Catálogo Hubiss (Fornecedor Nacional)',
+        subtitle: 'PRODUTO HOMOLOGADO A PREÇO DE ATACADO',
+        badge: '1.420 un. estoque',
+        x: 96,
+        y: 120,
+        w: 432,
+        content: 'Custo Atacado: R$ 42,00 | SKU: HUB-FONE-TWS-01\nFornecedor verificado com expedição em até 24h úteis'
+      },
+      {
+        id: 'n_hb_2',
+        type: 'api',
+        variant: 'cyan',
+        groupLabel: '02. publicação multicanal',
+        title: 'Integração Mercado Livre & Shopee',
+        subtitle: 'PUBLICAÇÃO AUTOMÁTICA VIA USERINTEGRATION',
+        badge: 'Margem 160%',
+        x: 96,
+        y: 360,
+        w: 432,
+        content: 'Preço Venda: R$ 109,90 | Lucro Bruto: R$ 67,90\nAtributos fiscais, imagens e variações sincronizados'
+      },
+      {
+        id: 'n_hb_3',
+        type: 'terminal',
+        variant: 'claude',
+        groupLabel: '03. venda no marketplace',
+        title: 'Webhook de Novo Pedido Aprovado',
+        subtitle: 'POST /webhooks/mercadolivre/orders',
+        badge: 'Venda Aprovada',
+        x: 624,
+        y: 120,
+        w: 440,
+        content: '> Pedido #MLB-94827103 recebido via Webhook\n> Cliente: Marcos Silveira | Total Pago: R$ 109,90\n> Status: [PAGO] | Etiqueta Mercado Envios gerada'
+      },
+      {
+        id: 'n_hb_4',
+        type: 'decision',
+        variant: 'purple',
+        groupLabel: '04. split e conciliação',
+        title: 'Débito Automático do Fornecedor',
+        subtitle: 'SPLIT INTELIGENTE E GERAÇÃO DE SUPPLIERORDER',
+        badge: 'R$ 42,00 Pago',
+        x: 624,
+        y: 360,
+        w: 440,
+        content: 'Débito imediato de R$ 42,00 da carteira Hubiss para o fornecedor.\nSe saldo insuficiente: emissão instantânea de PIX Cobrança.'
+      },
+      {
+        id: 'n_hb_5',
+        type: 'queue',
+        variant: 'cyan',
+        groupLabel: '05. expedição no fornecedor',
+        title: 'Painel do Fornecedor (Fulfillment)',
+        subtitle: 'IMPRESSÃO ZPL / PDF E ENVIO DIRETO',
+        badge: 'Despachado em 12h',
+        x: 1160,
+        y: 120,
+        w: 432,
+        content: 'Fornecedor recebe a etiqueta pronta da Shopee / Mercado Envios.\nEmbala o produto sem identificação e despacha na coleta.'
+      },
+      {
+        id: 'n_hb_6',
+        type: 'metric',
+        variant: 'emerald',
+        groupLabel: '06. lucro do dropshipper',
+        title: 'R$ 51,20 Lucro Líquido',
+        subtitle: 'MARGEM LIMPA APÓS TAXAS E CUSTO DE ATACADO',
+        badge: '+46.5% ROI',
+        x: 1160,
+        y: 360,
+        w: 432,
+        content: 'Venda: R$ 109,90 | Custo Atacado: R$ 42,00\nTaxa Marketplace: R$ 16,70 | Lucro Líquido no Bolso: R$ 51,20'
+      }
+    ],
+    edges: [
+      { id: 'e_hb_1', from: 'n_hb_1', fromPort: 'bottom', to: 'n_hb_2', toPort: 'top', label: 'precificação e margem', color: 'amber', animated: true },
+      { id: 'e_hb_2', from: 'n_hb_2', fromPort: 'right', to: 'n_hb_3', toPort: 'left', label: 'venda efetuada', color: 'cyan', animated: true },
+      { id: 'e_hb_3', from: 'n_hb_3', fromPort: 'bottom', to: 'n_hb_4', toPort: 'top', label: 'pagamento atacado', color: 'purple', animated: true },
+      { id: 'e_hb_4', from: 'n_hb_4', fromPort: 'right', to: 'n_hb_5', toPort: 'left', label: 'etiqueta liberada', color: 'cyan', animated: true },
+      { id: 'e_hb_5', from: 'n_hb_5', fromPort: 'bottom', to: 'n_hb_6', toPort: 'top', label: 'repasse do lucro', color: 'emerald', animated: true }
+    ],
+    scenes: [
+      {
+        name: 'catalogo',
+        title: '1. Seleção no Catálogo Hubiss',
+        subtitle: 'Produtos nacionais com estoque real a preço de atacado',
+        x: 120,
+        y: 72,
+        zoom: 1.05,
+        startTime: 0,
+        duration: 6.5,
+        narrationText: 'No ecossistema da Hubiss, o dropshipper não precisa comprar estoque antecipado. Ele navega pelo catálogo com centenas de fornecedores nacionais homologados, escolhendo produtos com estoque real e margens agressivas de atacado.',
+        activeNodeIds: ['n_hb_1']
+      },
+      {
+        name: 'publicacao',
+        title: '2. Publicação no Mercado Livre e Shopee',
+        subtitle: 'Sincronização automática de anúncios, títulos e estoque',
+        x: 120,
+        y: -150,
+        zoom: 1.15,
+        startTime: 6.5,
+        duration: 6.5,
+        narrationText: 'Com apenas um clique, o produto é publicado na conta do dropshipper no Mercado Livre ou Shopee. A Hubiss cuida do mapeamento de categorias, atributos fiscais e mantém o estoque sincronizado para evitar cancelamentos.',
+        activeNodeIds: ['n_hb_2']
+      },
+      {
+        name: 'webhook',
+        title: '3. Venda Realizada e Disparo de Webhook',
+        subtitle: 'Captura instantânea do pedido e geração de etiqueta oficial',
+        x: -420,
+        y: 72,
+        zoom: 1.1,
+        startTime: 13.0,
+        duration: 6.0,
+        narrationText: 'Quando o cliente final faz a compra no marketplace, o webhook é capturado instantaneamente pela Hubiss. O pedido é registrado no sistema e a etiqueta oficial de envio com código de rastreio já é solicitada.',
+        activeNodeIds: ['n_hb_3']
+      },
+      {
+        name: 'pagamento',
+        title: '4. Pagamento Automático do Custo de Atacado',
+        subtitle: 'Split financeiro e débito inteligente da carteira do dropshipper',
+        x: -420,
+        y: -150,
+        zoom: 1.15,
+        startTime: 19.0,
+        duration: 7.0,
+        narrationText: 'Nesta etapa fundamental, a Hubiss debita apenas o valor de custo de atacado da carteira do dropshipper e repassa para o fornecedor. Se faltar saldo, um PIX dinâmico é gerado para aprovação imediata sem travar a operação.',
+        activeNodeIds: ['n_hb_4']
+      },
+      {
+        name: 'expedicao',
+        title: '5. Impressão de Etiqueta e Expedição',
+        subtitle: 'O fornecedor embala e despacha sem dados de terceiros',
+        x: -940,
+        y: 72,
+        zoom: 1.1,
+        startTime: 26.0,
+        duration: 6.5,
+        narrationText: 'Com o pagamento garantido, o fornecedor visualiza a etiqueta em seu painel, embala o produto e despacha na coleta do marketplace em até 24 horas. O dropshipper não toca no produto em nenhum momento.',
+        activeNodeIds: ['n_hb_5']
+      },
+      {
+        name: 'lucro',
+        title: '6. Lucro Líquido na Conta do Dropshipper',
+        subtitle: 'Margem líquida livre após custos e taxas de marketplace',
+        x: -940,
+        y: -150,
+        zoom: 1.15,
+        startTime: 32.5,
+        duration: 6.8,
+        narrationText: 'Assim que a entrega é confirmada, o marketplace libera o valor total da venda para o dropshipper. Descontando o custo do fornecedor já pago, a margem líquida de lucro fica integralmente na conta bancária do vendedor.',
+        activeNodeIds: ['n_hb_6']
+      }
+    ]
   }
 ];

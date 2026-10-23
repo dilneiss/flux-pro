@@ -20,6 +20,7 @@ const categories = [
   { id: 'devtools', label: 'DevTools & IA' },
   { id: 'saas', label: 'Arquitetura SaaS' },
   { id: 'growth', label: 'Funil & VSL' },
+  { id: 'dropshipping', label: 'Dropshipping & Hubiss' },
   { id: 'performance', label: 'Performance' }
 ];
 
@@ -33,6 +34,8 @@ const filteredPresets = computed(() => {
       matchesCategory = preset.category.includes('Arquitetura') || preset.category.includes('Inteligência');
     } else if (activeCategory.value === 'growth') {
       matchesCategory = preset.category.includes('Marketing') || preset.category.includes('VSL');
+    } else if (activeCategory.value === 'dropshipping') {
+      matchesCategory = preset.category.includes('Dropshipping') || preset.category.includes('Hubiss');
     } else if (activeCategory.value === 'performance') {
       matchesCategory = preset.category.includes('Performance');
     }

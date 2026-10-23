@@ -2,9 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { MARKETPLACE_PRESETS } from '../src/constants/marketplacePresets.js';
 
 describe('Marketplace SaaS Presets Integrity', () => {
-  it('contains 5 high-converting niche templates with complete data', () => {
-    expect(MARKETPLACE_PRESETS).toHaveLength(5);
+  it('contains 6 high-converting niche templates including Hubiss Dropshipping flow', () => {
+    expect(MARKETPLACE_PRESETS).toHaveLength(6);
 
+    const hubissPreset = MARKETPLACE_PRESETS.find(p => p.id === 'hubiss-dropshipping-flow');
+    expect(hubissPreset).toBeDefined();
+    expect(hubissPreset.name).toContain('Hubiss');
+    expect(hubissPreset.nodes).toHaveLength(6);
+    expect(hubissPreset.edges).toHaveLength(5);
+    expect(hubissPreset.scenes).toHaveLength(6);
+    hubissPreset.scenes.forEach(s => {
+      expect(s.narrationText).toBeTruthy();
+    });
     MARKETPLACE_PRESETS.forEach((preset) => {
       expect(preset.id).toBeTruthy();
       expect(preset.name).toBeTruthy();
