@@ -96,8 +96,8 @@ const startResize = (e, direction) => {
       const newWidth = Math.max(240, Math.min(1200, Math.round((startWidth + deltaX) / 24) * 24));
       props.node.w = newWidth;
     }
-    // Width (Left handle)
-    else if (direction === 'left') {
+    // Width (Left handle or bottom-left corner)
+    else if (direction === 'left' || direction === 'bottom-left') {
       const deltaX = (moveEvt.clientX - startClientX) / zoom;
       const newWidth = Math.max(240, Math.min(1200, Math.round((startWidth - deltaX) / 24) * 24));
       const deltaW = newWidth - startWidth;
@@ -105,8 +105,8 @@ const startResize = (e, direction) => {
       props.node.w = newWidth;
     }
 
-    // Height (Bottom handle or bottom-right corner)
-    if (direction === 'bottom' || direction === 'bottom-right') {
+    // Height (Bottom handle, bottom-right or bottom-left corner)
+    if (direction === 'bottom' || direction === 'bottom-right' || direction === 'bottom-left') {
       const deltaY = (moveEvt.clientY - startClientY) / zoom;
       const newHeight = Math.max(88, Math.min(1200, Math.round((startHeight + deltaY) / 24) * 24));
       props.node.customHeight = newHeight;
@@ -195,43 +195,53 @@ const isFocused = computed(() => {
     </template>
 
     <!-- Interactive Resize Handles (shown when card is selected) -->
+    <!-- Interactive Resize Handles (positioned strictly away from the 4 center ports) -->
     <template v-if="isSelected && !isPresenting">
-      <!-- Right Handle -->
+      <!-- Right Handle (Upper section of right border, leaving center port 100% free) -->
       <div
-        class="resize-handle absolute top-4 bottom-4 -right-2 w-4 cursor-ew-resize z-40 group/rhandle flex items-center justify-center select-none"
+        class="resize-handle absolute top-2 -right-2 w-4 h-7 cursor-ew-resize z-40 group/rhandle flex items-center justify-center select-none"
         title="Arraste para redimensionar largura"
         @mousedown.stop="startResize($event, 'right')"
       >
-        <div class="w-1.5 h-7 rounded-full bg-cyan-400 group-hover/rhandle:bg-white group-hover/rhandle:h-9 group-hover/rhandle:shadow-[0_0_10px_#06b6d4] transition-all"></div>
+        <div class="w-1.5 h-5 rounded-full bg-cyan-400 group-hover/rhandle:bg-white group-hover/rhandle:h-6 group-hover/rhandle:shadow-[0_0_10px_#06b6d4] transition-all"></div>
       </div>
 
-      <!-- Left Handle -->
+      <!-- Left Handle (Upper section of left border, leaving center port 100% free) -->
       <div
-        class="resize-handle absolute top-4 bottom-4 -left-2 w-4 cursor-ew-resize z-40 group/lhandle flex items-center justify-center select-none"
+        class="resize-handle absolute top-2 -left-2 w-4 h-7 cursor-ew-resize z-40 group/lhandle flex items-center justify-center select-none"
         title="Arraste para redimensionar largura"
         @mousedown.stop="startResize($event, 'left')"
       >
-        <div class="w-1.5 h-7 rounded-full bg-cyan-400 group-hover/lhandle:bg-white group-hover/lhandle:h-9 group-hover/lhandle:shadow-[0_0_10px_#06b6d4] transition-all"></div>
+        <div class="w-1.5 h-5 rounded-full bg-cyan-400 group-hover/lhandle:bg-white group-hover/lhandle:h-6 group-hover/lhandle:shadow-[0_0_10px_#06b6d4] transition-all"></div>
       </div>
 
-      <!-- Bottom Handle -->
+      <!-- Bottom Handle (Offset to the right, leaving center bottom port 100% free) -->
       <div
-        class="resize-handle absolute -bottom-2 left-6 right-6 h-4 cursor-ns-resize z-40 group/bhandle flex items-center justify-center select-none"
+        class="resize-handle absolute -bottom-2 right-8 w-8 h-4 cursor-ns-resize z-40 group/bhandle flex items-center justify-center select-none"
         title="Arraste para redimensionar altura"
         @mousedown.stop="startResize($event, 'bottom')"
       >
-        <div class="h-1.5 w-7 rounded-full bg-cyan-400 group-hover/bhandle:bg-white group-hover/bhandle:w-9 group-hover/bhandle:shadow-[0_0_10px_#06b6d4] transition-all"></div>
+        <div class="h-1.5 w-6 rounded-full bg-cyan-400 group-hover/bhandle:bg-white group-hover/bhandle:w-8 group-hover/bhandle:shadow-[0_0_10px_#06b6d4] transition-all"></div>
       </div>
 
-      <!-- Bottom-Right Corner Handle -->
+      <!-- Bottom-Right Corner Handle (Universal multi-axis resize) -->
       <div
-        class="resize-handle absolute -bottom-2 -right-2 w-5 h-5 cursor-nwse-resize z-50 flex items-center justify-center group/crhandle select-none"
+        class="resize-handle absolute -bottom-2 -right-2 w-5 h-5 cursor-nwse-resize z-40 flex items-center justify-center group/crhandle select-none"
         title="Arraste para redimensionar largura e altura"
         @mousedown.stop="startResize($event, 'bottom-right')"
       >
         <div class="w-3.5 h-3.5 rounded bg-cyan-400 border border-slate-950 group-hover/crhandle:scale-125 group-hover/crhandle:bg-white group-hover/crhandle:shadow-[0_0_12px_#06b6d4] transition-all flex items-center justify-center">
           <span class="text-[8px] text-slate-950 font-bold leading-none">⤡</span>
         </div>
+      </div>
+
+      <!-- Bottom-Left Corner Handle -->
+      <div
+        class="resize-handle absolute -bottom-2 -left-2 w-4 h-4 cursor-nesw-resize z-40 flex items-center justify-center group/blhandle select-none"
+        title="Arraste para redimensionar"
+        @mousedown.stop="startResize($event, 'bottom-left')"
+      >
+        <div class="w-2.5 h-2.5 rounded-sm bg-cyan-400/80 border border-slate-950 group-hover/blhandle:scale-125 group-hover/blhandle:bg-white transition-all"></div>
       </div>
 
       <!-- Real-time Dimension Badge during Resize -->
