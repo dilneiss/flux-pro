@@ -55,7 +55,8 @@ const emit = defineEmits([
   'speak-scene',
   'load-project',
   'undo',
-  'redo'
+  'redo',
+  'generate-thumbnail'
 ]);
 
 const currentTab = ref('nodes');
@@ -197,6 +198,7 @@ onUnmounted(() => {
       @load-project="(data) => emit('load-project', data)"
       @undo="() => emit('undo')"
       @redo="() => emit('redo')"
+      @generate-thumbnail="() => emit('generate-thumbnail')"
     />
 
     <!-- Secondary Variant Flyout Panel (Slides out right next to dock) -->

@@ -13,6 +13,7 @@ import { useSpeechNarration } from '@/composables/useSpeechNarration';
 import { useAutoProducer } from '@/composables/useAutoProducer';
 import ClosedCaptionsBar from '@/components/layout/ClosedCaptionsBar.vue';
 import CountdownOverlay from '@/components/layout/CountdownOverlay.vue';
+import { generateThumbnailPng } from '@/utils/thumbnailGenerator';
 import {
   DEFAULT_META,
   DEFAULT_NODES,
@@ -45,6 +46,9 @@ const isAudioEnabled = ref(true);
 const isCrtFilterActive = ref(false);
 const isProgressiveReveal = ref(false);
 const isMicroDriftActive = ref(false);
+const isBgmActive = ref(false);
+const isGhostCursorActive = ref(true);
+const aspectRatio = ref('16:9');
 const activeNodeIds = computed(() => {
   if (isPresenting.value) {
     if (currentScene.value?.activeNodeIds?.length) {
@@ -65,6 +69,11 @@ const activeNodeIds = computed(() => {
   }
 
   return null;
+});
+
+const targetFocusedNode = computed(() => {
+  const id = currentScene.value?.activeNodeIds?.[0];
+  return id ? getNodeById(id) : selectedNode.value || nodes.value[0];
 });
 
 // Core Composables
@@ -165,6 +174,25 @@ const handleSpeakScene = (scene) => {
   const text = scene.narrationText || scene.title;
   soundFX.playConnectBeep();
   speechEngine.speak(text);
+};
+
+const handleToggleBgm = () => {
+  isBgmActive.value = soundFX.toggleBgm();
+};
+
+const handleToggleAspectRatio = () => {
+  aspectRatio.value = aspectRatio.value === '16:9' ? '9:16' : '16:9';
+  soundFX.playConnectBeep(1100, 1400);
+};
+
+const handleGenerateThumbnail = () => {
+  soundFX.playChime();
+  generateThumbnailPng({
+    meta: presentationMeta.value,
+    currentScene: currentScene.value,
+    nodes: nodes.value,
+    canvasTheme: canvasTheme.value
+  });
 };
 const { aiPromptText, generateGraph } = useAiDirector();
 
@@ -380,6 +408,7 @@ onUnmounted(() => {
       @speak-scene="handleSpeakScene"
       @undo="undo"
       @redo="redo"
+      @generate-thumbnail="handleGenerateThumbnail"
     />
     <!-- Main Workspace -->
     <main class="flex-1 flex flex-col relative overflow-hidden">
@@ -397,6 +426,9 @@ onUnmounted(() => {
         :is-progressive-reveal="isProgressiveReveal"
         :is-micro-drift-active="isMicroDriftActive"
         :is-auto-producing="autoProducer.isAutoProducing.value"
+        :is-bgm-active="isBgmActive"
+        :is-ghost-cursor-active="isGhostCursorActive"
+        :aspect-ratio="aspectRatio"
         @auto-layout="autoLayout"
         @reset-camera="resetCamera"
         @toggle-presenting="togglePresenting"
@@ -410,6 +442,10 @@ onUnmounted(() => {
         @toggle-progressive-reveal="isProgressiveReveal = !isProgressiveReveal"
         @toggle-micro-drift="isMicroDriftActive = !isMicroDriftActive"
         @start-auto-produce="autoProducer.startAutoProduce"
+        @toggle-bgm="handleToggleBgm"
+        @toggle-ghost-cursor="isGhostCursorActive = !isGhostCursorActive"
+        @toggle-aspect-ratio="handleToggleAspectRatio"
+        @generate-thumbnail="handleGenerateThumbnail"
       />
 
       <!-- Scene Header (Narrative HUD) -->
@@ -438,6 +474,9 @@ onUnmounted(() => {
         :revealed-node-ids="revealedNodeIds"
         :is-crt-filter-active="isCrtFilterActive"
         :is-micro-drift-active="isMicroDriftActive"
+        :is-ghost-cursor-active="isGhostCursorActive"
+        :target-focused-node="targetFocusedNode"
+        :aspect-ratio="aspectRatio"
         @start-pan="startPan"
         @pan="handlePanMove"
         @end-pan="handlePanEnd"
@@ -506,6 +545,8 @@ onUnmounted(() => {
     <ClosedCaptionsBar
       v-if="isPresenting"
       :caption="autoProducer.currentCaption.value || (speechEngine.isSpeaking.value ? speechEngine.currentSpokenText.value : currentScene?.narrationText || '')"
+      :current-word-index="speechEngine.currentWordIndex.value"
+      :is-vertical-format="aspectRatio === '9:16'"
     />
 
     <!-- 3... 2... 1... Auto-Producer Countdown Overlay -->

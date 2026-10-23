@@ -25,7 +25,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['open-render-modal', 'load-project', 'undo', 'redo']);
+const emit = defineEmits(['open-render-modal', 'load-project', 'undo', 'redo', 'generate-thumbnail']);
 
 const exportOutput = ref('');
 const feedbackMsg = ref('');
@@ -218,6 +218,13 @@ const copyYouTubeChapters = () => {
         class="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg transition flex items-center justify-center gap-2 shadow-lg"
       >
         <span>⚛️</span> Copiar Remotion TSX (4K 60fps)
+      </button>
+
+      <button
+        @click="emit('generate-thumbnail')"
+        class="w-full py-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-bold rounded-lg transition flex items-center justify-center gap-2 shadow font-mono"
+      >
+        <span>📸</span> Baixar Capa Thumbnail (1920x1080)
       </button>
 
       <button

@@ -1,16 +1,21 @@
 import { ref, onMounted, getCurrentInstance } from 'vue';
+import { soundFX } from '../utils/soundFX.js';
 
 export function useSpeechNarration() {
   const isSpeechEnabled = ref(true);
   const isSpeaking = ref(false);
   const currentSpokenText = ref('');
   const spokenCharIndex = ref(0);
+  const currentWordIndex = ref(0);
   const speechRate = ref(1.02); // Natural cadence for technical presentations
   const speechPitch = ref(1.0);
   const availableVoices = ref([]);
   const selectedVoiceURI = ref('');
   const elevenLabsApiKey = ref(typeof localStorage !== 'undefined' ? localStorage.getItem('circuitflow_elevenlabs_key') || '' : '');
   const elevenLabsVoiceId = ref('21m00Tcm4TlvDq8ikWAM'); // Rachel default
+
+  let fallbackWordTimer = null;
+  let activeAudioElement = null;
 
   /**
    * Estimates scene duration in seconds based on text length
@@ -31,7 +36,6 @@ export function useSpeechNarration() {
     availableVoices.value = voices;
 
     if (voices.length > 0 && !selectedVoiceURI.value) {
-      // Prioritize natural Brazilian Portuguese voices
       const ptBrVoices = voices.filter(v => v.lang === 'pt-BR' || v.lang === 'pt_BR');
       const naturalPt = ptBrVoices.find(v =>
         v.name.includes('Antonio') ||
@@ -56,11 +60,7 @@ export function useSpeechNarration() {
 
   /**
    * Speak a text string with either ElevenLabs or Native SpeechSynthesis
-   * @param {string} text - text to speak
-   * @param {Object} options - callbacks: onStart, onEnd, onBoundary
    */
-  let activeAudioElement = null;
-
   const speak = (text, options = {}) => {
     const { onStart, onEnd, onBoundary } = options;
 
@@ -77,7 +77,22 @@ export function useSpeechNarration() {
 
     currentSpokenText.value = text;
     spokenCharIndex.value = 0;
+    currentWordIndex.value = 0;
     isSpeaking.value = true;
+    soundFX.setDucking(true);
+
+    // Setup fallback word timer for karaoke in case browser omits onboundary
+    const wordsList = text.trim().split(/\s+/).filter(Boolean);
+    const estSeconds = estimateDuration(text);
+    const wordIntervalMs = Math.max(160, Math.floor((estSeconds * 950) / Math.max(1, wordsList.length)));
+
+    let timerWordIdx = 0;
+    fallbackWordTimer = setInterval(() => {
+      if (timerWordIdx < wordsList.length - 1) {
+        timerWordIdx++;
+        currentWordIndex.value = timerWordIdx;
+      }
+    }, wordIntervalMs);
 
     // 1. ElevenLabs Speech if configured
     if (elevenLabsApiKey.value && elevenLabsApiKey.value.trim().length > 10) {
@@ -100,35 +115,48 @@ export function useSpeechNarration() {
 
         utterance.onstart = () => {
           isSpeaking.value = true;
+          soundFX.setDucking(true);
           if (onStart) onStart();
         };
 
         utterance.onboundary = (event) => {
           if (typeof event.charIndex === 'number') {
             spokenCharIndex.value = event.charIndex;
+            const upToChar = text.slice(0, event.charIndex);
+            const wordsBefore = upToChar.trim().split(/\s+/).filter(Boolean).length;
+            currentWordIndex.value = wordsBefore;
           }
           if (onBoundary) onBoundary(event);
         };
 
         utterance.onend = () => {
+          clearTimeout(fallbackWordTimer);
           isSpeaking.value = false;
+          soundFX.setDucking(false);
+          currentWordIndex.value = wordsList.length;
           if (onEnd) onEnd();
         };
 
         utterance.onerror = (err) => {
           console.warn('[SpeechSynthesis] Event error:', err);
+          clearTimeout(fallbackWordTimer);
           isSpeaking.value = false;
+          soundFX.setDucking(false);
           if (onEnd) onEnd();
         };
 
         window.speechSynthesis.speak(utterance);
       } catch (err) {
         console.warn('[SpeechSynthesis] Failed:', err);
+        clearTimeout(fallbackWordTimer);
         isSpeaking.value = false;
+        soundFX.setDucking(false);
         if (onEnd) onEnd();
       }
     } else {
+      clearTimeout(fallbackWordTimer);
       isSpeaking.value = false;
+      soundFX.setDucking(false);
       if (onEnd) onEnd();
     }
 
@@ -165,20 +193,34 @@ export function useSpeechNarration() {
       const audio = new Audio(audioUrl);
       activeAudioElement = audio;
 
+      // Connect into soundFX MasterAudioMixer destination stream
+      soundFX.init();
+      if (soundFX.ctx && soundFX.ctx.createMediaElementSource) {
+        try {
+          const source = soundFX.ctx.createMediaElementSource(audio);
+          soundFX._connectSource(source);
+        } catch {}
+      }
+
       audio.onplay = () => {
         isSpeaking.value = true;
+        soundFX.setDucking(true);
         if (onStart) onStart();
       };
 
       audio.onended = () => {
+        clearTimeout(fallbackWordTimer);
         isSpeaking.value = false;
+        soundFX.setDucking(false);
         URL.revokeObjectURL(audioUrl);
         activeAudioElement = null;
         if (onEnd) onEnd();
       };
 
       audio.onerror = () => {
+        clearTimeout(fallbackWordTimer);
         isSpeaking.value = false;
+        soundFX.setDucking(false);
         activeAudioElement = null;
         if (onEnd) onEnd();
       };
@@ -186,7 +228,6 @@ export function useSpeechNarration() {
       await audio.play();
     } catch (err) {
       console.warn('[ElevenLabs] Fallback to native speech:', err);
-      // Fallback directly to native speech
       elevenLabsApiKey.value = '';
       speak(text, { onStart, onEnd });
     }
@@ -196,6 +237,10 @@ export function useSpeechNarration() {
    * Stop any current speech playback
    */
   const cancel = () => {
+    if (fallbackWordTimer) {
+      clearInterval(fallbackWordTimer);
+      fallbackWordTimer = null;
+    }
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
@@ -204,6 +249,7 @@ export function useSpeechNarration() {
       activeAudioElement = null;
     }
     isSpeaking.value = false;
+    soundFX.setDucking(false);
   };
 
   if (getCurrentInstance()) {
@@ -220,6 +266,7 @@ export function useSpeechNarration() {
     isSpeaking,
     currentSpokenText,
     spokenCharIndex,
+    currentWordIndex,
     speechRate,
     speechPitch,
     availableVoices,

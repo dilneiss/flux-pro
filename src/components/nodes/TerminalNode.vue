@@ -1,9 +1,63 @@
 <script setup>
-defineProps({
+import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { soundFX } from '@/utils/soundFX';
+
+const props = defineProps({
   node: {
     type: Object,
     required: true
+  },
+  isFocused: {
+    type: Boolean,
+    default: false
   }
+});
+
+const displayedContent = ref(props.node.content || '');
+let typewriterTimer = null;
+
+const runTypewriter = () => {
+  if (typewriterTimer) clearInterval(typewriterTimer);
+
+  const fullText = props.node.content || '';
+  if (!fullText) return;
+
+  displayedContent.value = '';
+  let charIdx = 0;
+  const speed = Math.max(15, Math.min(45, Math.floor(2500 / fullText.length)));
+
+  typewriterTimer = setInterval(() => {
+    charIdx++;
+    displayedContent.value = fullText.slice(0, charIdx);
+
+    // Click tick every 3 characters
+    if (charIdx % 3 === 0) {
+      soundFX.playKeyTick();
+    }
+
+    if (charIdx >= fullText.length) {
+      clearInterval(typewriterTimer);
+      typewriterTimer = null;
+    }
+  }, speed);
+};
+
+watch(() => props.isFocused, (focused) => {
+  if (focused) {
+    runTypewriter();
+  } else {
+    displayedContent.value = props.node.content || '';
+  }
+});
+
+onMounted(() => {
+  if (props.isFocused) {
+    runTypewriter();
+  }
+});
+
+onUnmounted(() => {
+  if (typewriterTimer) clearInterval(typewriterTimer);
 });
 </script>
 
@@ -22,7 +76,7 @@ defineProps({
       <span class="text-[10px] text-emerald-400 font-mono">● {{ node.badge }}</span>
     </div>
     <div class="p-3.5 bg-[#0b0e13] text-xs leading-relaxed space-y-2.5 font-mono">
-      <div class="text-slate-200 whitespace-pre-line typewriter-line">{{ node.content }}</div>
+      <div class="text-slate-200 whitespace-pre-line">{{ displayedContent }}<span v-if="isFocused" class="cursor-blink ml-0.5">▋</span></div>
       <div
         v-if="node.subtitle"
         class="inline-block bg-cyan-950/90 border border-cyan-500/60 text-cyan-300 px-2 py-0.5 rounded text-[11px] break-all"

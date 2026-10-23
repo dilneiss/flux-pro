@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { soundFX } from '../utils/soundFX.js';
 
 export function useScreenRecorder() {
   const isRecording = ref(false);
@@ -37,8 +38,17 @@ export function useScreenRecorder() {
         },
         audio: false
       });
+      // Merge audio tracks from soundFX Master Mixer
+      const tracks = [...stream.getVideoTracks()];
+      const mixedAudioStream = soundFX.getMixedAudioStream();
+      if (mixedAudioStream && mixedAudioStream.getAudioTracks().length > 0) {
+        tracks.push(...mixedAudioStream.getAudioTracks());
+      } else if (stream.getAudioTracks().length > 0) {
+        tracks.push(...stream.getAudioTracks());
+      }
 
-      mediaStream.value = stream;
+      const combinedStream = new MediaStream(tracks);
+      mediaStream.value = combinedStream;
 
       // Select supported mimeType
       const mimeTypes = [
@@ -49,7 +59,7 @@ export function useScreenRecorder() {
       ];
       const selectedMime = mimeTypes.find((type) => MediaRecorder.isTypeSupported(type)) || 'video/webm';
 
-      const recorder = new MediaRecorder(stream, {
+      const recorder = new MediaRecorder(combinedStream, {
         mimeType: selectedMime,
         videoBitsPerSecond: 12000000 // 12 Mbps for crystal-clear 1080p/4K
       });

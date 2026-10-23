@@ -25,6 +25,10 @@ const props = defineProps({
   isSelected: {
     type: Boolean,
     default: false
+  },
+  isFocused: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -59,6 +63,7 @@ const currentComponent = computed(() => {
     :is="currentComponent"
     :node="node"
     :is-selected="isSelected"
+    :is-focused="isFocused"
     @upload="(payload) => emit('upload', payload)"
   />
 </template>

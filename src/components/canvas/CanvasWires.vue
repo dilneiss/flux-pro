@@ -112,6 +112,15 @@ const isEdgeInSpotlight = (edge) => {
         filter="url(#glow-cyan)"
       />
 
+      <!-- Glowing Data Packet traversing the Manhattan path -->
+      <circle r="4" :fill="getEdgeColor(edge.color).pulse" filter="url(#glow-cyan)">
+        <animateMotion
+          :path="computeSmartManhattanPath(edge, getNodeById, index)"
+          dur="2.4s"
+          repeatCount="indefinite"
+        />
+      </circle>
+
       <!-- Solder Pads at connection points -->
       <circle
         :cx="getPortCoords(getNodeById(edge.from), edge.fromPort).x"

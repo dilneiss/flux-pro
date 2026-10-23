@@ -1,9 +1,49 @@
 <script setup>
-defineProps({
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+
+const props = defineProps({
   node: {
     type: Object,
     required: true
+  },
+  isFocused: {
+    type: Boolean,
+    default: false
   }
+});
+
+const lines = computed(() => {
+  return (props.node.content || '').split('\n');
+});
+
+const activeLineIdx = ref(0);
+let lineTimer = null;
+
+const startLineCycle = () => {
+  if (lineTimer) clearInterval(lineTimer);
+  activeLineIdx.value = 0;
+  if (lines.value.length <= 1) return;
+
+  lineTimer = setInterval(() => {
+    activeLineIdx.value = (activeLineIdx.value + 1) % lines.value.length;
+  }, 1150);
+};
+
+watch(() => props.isFocused, (focused) => {
+  if (focused) {
+    startLineCycle();
+  } else {
+    if (lineTimer) clearInterval(lineTimer);
+    activeLineIdx.value = -1;
+  }
+});
+
+onMounted(() => {
+  if (props.isFocused) startLineCycle();
+});
+
+onUnmounted(() => {
+  if (lineTimer) clearInterval(lineTimer);
 });
 </script>
 
@@ -15,8 +55,8 @@ defineProps({
         {{ node.badge }}
       </span>
     </div>
-    <pre
-      class="p-3 bg-[#090c10] text-[11px] leading-relaxed overflow-x-auto font-mono typewriter-line"
+    <div
+      class="p-3 bg-[#090c10] text-[11px] leading-relaxed overflow-x-auto font-mono space-y-0.5"
       :class="
         node.variant === 'diff'
           ? 'text-emerald-300'
@@ -24,6 +64,20 @@ defineProps({
           ? 'text-amber-300'
           : 'text-cyan-300'
       "
-    ><code>{{ node.content }}</code></pre>
+    >
+      <div
+        v-for="(line, idx) in lines"
+        :key="idx"
+        :class="[
+          'px-1.5 py-0.5 rounded transition-all duration-300 flex items-center gap-2',
+          isFocused && activeLineIdx === idx
+            ? 'bg-cyan-500/25 border-l-2 border-cyan-400 pl-2 text-white font-bold shadow-[inset_0_0_12px_rgba(6,182,212,0.15)]'
+            : 'hover:bg-slate-800/40'
+        ]"
+      >
+        <span class="text-[9px] text-slate-600 select-none w-4 text-right shrink-0">{{ idx + 1 }}</span>
+        <span class="whitespace-pre">{{ line || ' ' }}</span>
+      </div>
+    </div>
   </div>
 </template>

@@ -289,6 +289,7 @@ const isProgressiveHidden = computed(() => {
     <NodeRenderer
       :node="node"
       :is-selected="isSelected"
+      :is-focused="isFocused"
       @upload="(payload) => emit('upload-media', payload)"
     />
   </div>

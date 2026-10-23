@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import CanvasWires from './CanvasWires.vue';
 import CanvasNode from './CanvasNode.vue';
+import GhostCursor from './GhostCursor.vue';
 
 const props = defineProps({
   camera: {
@@ -71,6 +72,18 @@ const props = defineProps({
   isMicroDriftActive: {
     type: Boolean,
     default: false
+  },
+  isGhostCursorActive: {
+    type: Boolean,
+    default: true
+  },
+  targetFocusedNode: {
+    type: Object,
+    default: null
+  },
+  aspectRatio: {
+    type: String,
+    default: '16:9'
   }
 });
 
@@ -198,11 +211,13 @@ onUnmounted(() => {
       </span>
     </div>
 
+    <!-- 9:16 Shorts Framing Mask (Left & Right Dark Pillars) -->
+    <div v-if="aspectRatio === '9:16'" class="absolute inset-y-0 left-0 z-40 bg-black/90 backdrop-blur-sm pointer-events-none border-r border-cyan-500/40" style="width: calc((100% - (100vh * 9 / 16)) / 2);"></div>
+    <div v-if="aspectRatio === '9:16'" class="absolute inset-y-0 right-0 z-40 bg-black/90 backdrop-blur-sm pointer-events-none border-l border-cyan-500/40" style="width: calc((100% - (100vh * 9 / 16)) / 2);"></div>
+
     <!-- Broadcast Overlays (CRT Scanlines & Vignette) -->
     <div v-if="isCrtFilterActive" class="absolute inset-0 z-40 crt-overlay pointer-events-none"></div>
     <div v-if="isCrtFilterActive" class="absolute inset-0 z-40 vignette-overlay pointer-events-none"></div>
-
-    <!-- World Transform Container -->
     <div
       :class="{
         'camera-smooth': !isDraggingCanvas && !draggingNode && !activeWire,
@@ -246,6 +261,12 @@ onUnmounted(() => {
         @complete-wire="({ node: n, port }) => emit('complete-wire', { node: n, port })"
         @drop-file="(payload) => emit('drop-file', payload)"
         @upload-media="(payload) => emit('upload-media', payload)"
+      />
+
+      <!-- Automated Ghost Cursor (Points & Clicks on Active Node) -->
+      <GhostCursor
+        :active="isGhostCursorActive && isPresenting"
+        :target-node="targetFocusedNode"
       />
     </div>
   </div>
