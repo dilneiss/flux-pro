@@ -31,7 +31,15 @@ const props = defineProps({
   camera: {
     type: Object,
     default: () => ({ x: 0, y: 0, zoom: 1 })
-  }
+  },
+  isProgressiveReveal: {
+    type: Boolean,
+    default: false
+  },
+  revealedNodeIds: {
+    type: Object,
+    default: null
+  },
 });
 
 const emit = defineEmits([
@@ -135,6 +143,11 @@ const isFocused = computed(() => {
   if (!props.isSpotlightActive || !props.activeNodeIds) return false;
   return props.activeNodeIds.includes(props.node.id);
 });
+
+const isProgressiveHidden = computed(() => {
+  if (!props.isProgressiveReveal || !props.revealedNodeIds) return false;
+  return !props.revealedNodeIds.has(props.node.id);
+});
 </script>
 
 <template>
@@ -147,17 +160,19 @@ const isFocused = computed(() => {
       minHeight: node.customHeight ? `${node.customHeight}px` : undefined
     }"
     :class="[
-      'node-card absolute z-10 rounded bg-[#10141c]/95 select-none cursor-move',
+      'node-card absolute z-10 rounded bg-[#10141c]/95 select-none cursor-move transition-all duration-500',
       node.type === 'chip' ? 'ic-pins' : '',
-      isSelected
+      isProgressiveHidden
+        ? 'opacity-0 scale-90 translate-y-4 pointer-events-none'
+        : isSelected
         ? 'ring-2 ring-cyan-400 shadow-[0_0_35px_rgba(6,182,212,0.35)] opacity-100 z-20'
         : isDragOver
         ? 'ring-2 ring-emerald-400 bg-emerald-950/40 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)] opacity-100'
         : isDimmed
-        ? 'opacity-25 saturate-50 brightness-50 transition-all duration-500 border border-slate-800 hover:opacity-100 hover:saturate-100 hover:brightness-100'
+        ? 'opacity-25 saturate-50 brightness-50 border border-slate-800 hover:opacity-100 hover:saturate-100 hover:brightness-100'
         : isFocused
-        ? 'opacity-100 ring-2 ring-cyan-400/70 shadow-[0_0_30px_rgba(6,182,212,0.25)] transition-all duration-500 border border-slate-700/80'
-        : 'border border-slate-700/80 shadow-2xl hover:border-slate-500/80 transition-all duration-500'
+        ? 'opacity-100 ring-2 ring-cyan-400/70 shadow-[0_0_30px_rgba(6,182,212,0.25)] border border-slate-700/80'
+        : 'border border-slate-700/80 shadow-2xl hover:border-slate-500/80'
     ]"
     @mousedown="onMouseDown"
     @mouseup="onMouseUp"

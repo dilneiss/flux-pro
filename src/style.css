@@ -119,6 +119,30 @@ body {
 .typewriter-line {
   animation: typewriter-reveal 0.5s ease-out forwards;
 }
+/* Broadcast CRT & Vignette Overlays */
+.crt-overlay {
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+}
+
+.vignette-overlay {
+  box-shadow: inset 0 0 140px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+}
+
+/* Camera Micro-Drift Animation for cinematic feel */
+@keyframes camera-drift {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(3px, -2px); }
+  50% { transform: translate(-2px, 3px); }
+  75% { transform: translate(-3px, -1px); }
+}
+
+.camera-micro-drift {
+  animation: camera-drift 12s ease-in-out infinite;
+}
+
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: #090b0e; }

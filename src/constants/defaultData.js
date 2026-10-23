@@ -133,6 +133,7 @@ export const DEFAULT_EDGES = [
 
 export const DEFAULT_SCENES = [
   {
+    id: 's1',
     name: 'caminho do aplicativo',
     title: 'informe o caminho do aplicativo',
     subtitle: 'o endereço dele no computador',
@@ -140,41 +141,57 @@ export const DEFAULT_SCENES = [
     y: 72,
     zoom: 0.88,
     startTime: 0,
-    activeNodeIds: ['n1', 'n2']
+    duration: 5.5,
+    narrationText: 'Tudo começa apontando o executável que queremos entender. Neste exemplo, mapeamos o Camera Hub na pasta de aplicativos do sistema.',
+    activeNodeIds: ['n1', 'n2'],
+    revealMode: true
   },
   {
+    id: 's2',
     name: 'foco no finder',
     title: 'localize o binário no sistema',
     subtitle: 'pasta Applications do macOS',
     x: 96,
     y: -140,
     zoom: 1.15,
-    startTime: 4.5,
-    activeNodeIds: ['n2']
+    startTime: 5.5,
+    duration: 5.0,
+    narrationText: 'Abrimos o Finder para validar a árvore de diretórios e extrair o caminho binário absoluto para o nosso agente de engenharia reversa.',
+    activeNodeIds: ['n2'],
+    revealMode: true
   },
   {
+    id: 's3',
     name: 'pedido ao agente',
     title: 'o pedido de investigação com evidência',
     subtitle: 'colando o caminho no Claude Code / Codex',
     x: -420,
     y: -140,
     zoom: 1.15,
-    startTime: 9.0,
-    activeNodeIds: ['n3']
+    startTime: 10.5,
+    duration: 5.2,
+    narrationText: 'Conectamos o agente ao protocolo MCP do REA para inspecionar os símbolos, as funções e a lógica de rolagem interna do código.',
+    activeNodeIds: ['n3'],
+    revealMode: true
   },
   {
+    id: 's4',
     name: 'execução e código',
     title: 'do binário fechado para uma versão própria',
     subtitle: 'resultado rodando a 60fps sem sobreposição',
     x: -860,
     y: -40,
     zoom: 1.0,
-    startTime: 14.0,
-    activeNodeIds: ['n5', 'n4']
+    startTime: 15.7,
+    duration: 5.8,
+    narrationText: 'Com os padrões decodificados, reimplementamos uma versão própria em TypeScript rodando a sessenta frames por segundo com total controle.',
+    activeNodeIds: ['n5', 'n4'],
+    revealMode: true
   }
 ];
 
-export const DEFAULT_AI_PROMPT = `chip: /Applications/Photoshop.app | Binário Proprietário Original
-terminal: Engenharia Reversa via REA | Investigando máscaras e camadas PSD
-code: artcraft_psd_parser.rs | Reimplementação limpa em Rust + WebGPU
-media: ArtCraft Studio Aberto | Compatível com arquivos PSD a 60fps`;
+export const DEFAULT_AI_PROMPT = `chip | /bin/target_auth.bin | Binário de Autenticação | Vamos iniciar a análise por este binário de segurança encontrado no servidor.
+terminal | Agente IA REA | Inspeção Estática de Símbolos | O agente decompila as instruções de máquina em busca de rotas desprotegidas.
+database | PostgreSQL v16 | Tabela de Licenças e Chaves | Identificamos o banco de dados onde os tokens criptografados eram validados.
+code | auth_bypass_fix.rs | Patch de Blindagem em Rust | Escrevemos a correção estrita em Rust com validação assimétrica de chaves.
+media | Dashboard Protegido | Produção 100% Blindada | Sistema em execução contínua com zero vulnerabilidades e latência mínima.`;

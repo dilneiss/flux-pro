@@ -24,12 +24,12 @@ const emit = defineEmits([
     <!-- Header -->
     <div>
       <div class="text-xs font-bold text-cyan-400 font-mono flex items-center gap-1.5">
-        <span>🤖</span> Script-to-Graph AI Director
+        <span>🤖</span> Roteiro Completo para Vídeo (IA Director)
       </div>
       <p class="text-[11px] text-slate-400 leading-relaxed mt-1">
-        Cole os tópicos do seu vídeo (uma etapa por linha no formato
-        <code class="text-cyan-300 font-mono">Tipo: Título | Subtítulo</code>)
-        e a ferramenta constrói os nós, conecta os cabos ortogonais e cria os zooms de câmera de forma automática.
+        Cole o roteiro completo no formato:
+        <code class="text-cyan-300 font-mono block bg-slate-900 p-1.5 rounded my-1 border border-slate-800">Tipo | Título | Subtítulo | Narração Falada</code>
+        O motor cria os nós sem colisão, conecta as trilhas ortogonais e gera todas as cenas com áudio e sincronia prontas para gravação autônoma.
       </p>
     </div>
 
@@ -48,9 +48,9 @@ const emit = defineEmits([
     <!-- Action Button -->
     <button
       @click="emit('generate-graph')"
-      class="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded text-xs transition shadow-lg flex items-center justify-center gap-1.5 font-mono"
+      class="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold rounded-lg text-xs transition shadow-[0_0_20px_rgba(6,182,212,0.3)] flex items-center justify-center gap-2 font-mono"
     >
-      <span>⚡</span> Gerar Grafo + Cenas Automatizadas
+      <span>⚡</span> Gerar Apresentação Narrada Completa
     </button>
 
     <!-- Visual Themes -->

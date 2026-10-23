@@ -55,6 +55,22 @@ const props = defineProps({
   activeNodeIds: {
     type: Array,
     default: null
+  },
+  isProgressiveReveal: {
+    type: Boolean,
+    default: false
+  },
+  revealedNodeIds: {
+    type: Object,
+    default: null
+  },
+  isCrtFilterActive: {
+    type: Boolean,
+    default: false
+  },
+  isMicroDriftActive: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -182,10 +198,15 @@ onUnmounted(() => {
       </span>
     </div>
 
+    <!-- Broadcast Overlays (CRT Scanlines & Vignette) -->
+    <div v-if="isCrtFilterActive" class="absolute inset-0 z-40 crt-overlay pointer-events-none"></div>
+    <div v-if="isCrtFilterActive" class="absolute inset-0 z-40 vignette-overlay pointer-events-none"></div>
+
     <!-- World Transform Container -->
     <div
       :class="{
-        'camera-smooth': !isDraggingCanvas && !draggingNode && !activeWire
+        'camera-smooth': !isDraggingCanvas && !draggingNode && !activeWire,
+        'camera-micro-drift': isMicroDriftActive
       }"
       :style="{
         transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`,
@@ -214,6 +235,8 @@ onUnmounted(() => {
         :active-wire-source-id="activeWire?.fromId"
         :is-spotlight-active="isSpotlightActive"
         :active-node-ids="activeNodeIds"
+        :is-progressive-reveal="isProgressiveReveal"
+        :revealed-node-ids="revealedNodeIds"
         :camera="camera"
         @resize-end="() => emit('end-pan')"
         @drag-start="(e, n) => emit('node-drag-start', e, n)"

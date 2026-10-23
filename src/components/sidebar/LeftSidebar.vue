@@ -51,7 +51,11 @@ const emit = defineEmits([
   'update:aiPromptText',
   'update:canvasTheme',
   'generate-graph',
-  'open-render-modal'
+  'open-render-modal',
+  'speak-scene',
+  'load-project',
+  'undo',
+  'redo'
 ]);
 
 const currentTab = ref('nodes');
@@ -168,6 +172,7 @@ onUnmounted(() => {
       @capture-keyframe="() => emit('capture-keyframe')"
       @remove-scene="(idx) => emit('remove-scene', idx)"
       @toggle-live-recording="() => emit('toggle-live-recording')"
+      @speak-scene="(scene) => emit('speak-scene', scene)"
     />
 
     <!-- Tab 3: AI Director -->
@@ -184,10 +189,14 @@ onUnmounted(() => {
     <ExportTab
       v-else-if="currentTab === 'export'"
       :presentation-meta="presentationMeta"
+      :canvas-theme="canvasTheme"
       :nodes="nodes"
       :edges="edges"
       :scenes="scenes"
       @open-render-modal="emit('open-render-modal')"
+      @load-project="(data) => emit('load-project', data)"
+      @undo="() => emit('undo')"
+      @redo="() => emit('redo')"
     />
 
     <!-- Secondary Variant Flyout Panel (Slides out right next to dock) -->

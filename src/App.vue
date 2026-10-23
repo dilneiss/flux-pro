@@ -8,7 +8,11 @@ import { useShortcuts } from '@/composables/useShortcuts';
 import { useScreenRecorder } from '@/composables/useScreenRecorder';
 import { useElevenLabs } from '@/composables/useElevenLabs';
 import { useKeyframePlayback } from '@/composables/useKeyframePlayback';
-
+import { soundFX } from '@/utils/soundFX';
+import { useSpeechNarration } from '@/composables/useSpeechNarration';
+import { useAutoProducer } from '@/composables/useAutoProducer';
+import ClosedCaptionsBar from '@/components/layout/ClosedCaptionsBar.vue';
+import CountdownOverlay from '@/components/layout/CountdownOverlay.vue';
 import {
   DEFAULT_META,
   DEFAULT_NODES,
@@ -37,7 +41,10 @@ const isMarketplaceOpen = ref(false);
 const isAudioSyncOpen = ref(false);
 const isRenderOpen = ref(false);
 const isSpotlightActive = ref(false);
-
+const isAudioEnabled = ref(true);
+const isCrtFilterActive = ref(false);
+const isProgressiveReveal = ref(false);
+const isMicroDriftActive = ref(false);
 const activeNodeIds = computed(() => {
   if (isPresenting.value) {
     if (currentScene.value?.activeNodeIds?.length) {
@@ -114,13 +121,54 @@ const {
   togglePresenting
 } = useScenes(DEFAULT_SCENES);
 const keyframePlayback = useKeyframePlayback(scenes, currentSceneIndex, activateScene);
+const speechEngine = useSpeechNarration();
+const screenRecorder = useScreenRecorder();
 
+const autoProducer = useAutoProducer(
+  scenes,
+  currentSceneIndex,
+  activateScene,
+  camera,
+  isPresenting,
+  speechEngine,
+  screenRecorder
+);
 
+const handleToggleAudio = () => {
+  isAudioEnabled.value = soundFX.toggle();
+  speechEngine.isSpeechEnabled.value = isAudioEnabled.value;
+};
+
+const revealedNodeIds = computed(() => {
+  if (!isProgressiveReveal.value) return null;
+  const set = new Set();
+  for (let i = 0; i <= currentSceneIndex.value && i < scenes.value.length; i++) {
+    const sc = scenes.value[i];
+    if (sc?.activeNodeIds) {
+      sc.activeNodeIds.forEach(id => set.add(id));
+    }
+  }
+  return set;
+});
+
+const handleLoadProject = (data) => {
+  if (data.nodes) nodes.value = data.nodes;
+  if (data.edges) edges.value = data.edges;
+  if (data.scenes) scenes.value = data.scenes;
+  if (data.meta) presentationMeta.value = { ...data.meta };
+  if (data.canvasTheme) canvasTheme.value = data.canvasTheme;
+  soundFX.playChime();
+  activateScene(0, camera);
+};
+
+const handleSpeakScene = (scene) => {
+  const text = scene.narrationText || scene.title;
+  soundFX.playConnectBeep();
+  speechEngine.speak(text);
+};
 const { aiPromptText, generateGraph } = useAiDirector();
 
 // In-Browser MediaRecorder Screen Recording
-const screenRecorder = useScreenRecorder();
-
 const handleToggleRecordScreen = async () => {
   if (screenRecorder.isRecording.value) {
     screenRecorder.stopRecording();
@@ -277,7 +325,9 @@ useShortcuts({
   onPrevScene: () => prevScene(camera),
   onTogglePlay: () => keyframePlayback.togglePlayback(camera),
   onEscape: () => {
-    if (screenRecorder.isRecording.value) {
+    if (autoProducer.isAutoProducing.value) {
+      autoProducer.cancelAutoProduce();
+    } else if (screenRecorder.isRecording.value) {
       screenRecorder.stopRecording();
       keyframePlayback.stopPlayback();
       isPresenting.value = false;
@@ -326,8 +376,11 @@ onUnmounted(() => {
       @update:canvas-theme="(val) => (canvasTheme = val)"
       @generate-graph="handleGenerateGraph"
       @open-render-modal="isRenderOpen = true"
+      @load-project="handleLoadProject"
+      @speak-scene="handleSpeakScene"
+      @undo="undo"
+      @redo="redo"
     />
-
     <!-- Main Workspace -->
     <main class="flex-1 flex flex-col relative overflow-hidden">
       <!-- TMUX Top Bar -->
@@ -339,6 +392,11 @@ onUnmounted(() => {
         :recording-duration-formatted="screenRecorder.formatDuration(screenRecorder.recordingDuration.value)"
         :canvas-theme="canvasTheme"
         :is-spotlight-active="isSpotlightActive"
+        :is-audio-enabled="isAudioEnabled"
+        :is-crt-filter-active="isCrtFilterActive"
+        :is-progressive-reveal="isProgressiveReveal"
+        :is-micro-drift-active="isMicroDriftActive"
+        :is-auto-producing="autoProducer.isAutoProducing.value"
         @auto-layout="autoLayout"
         @reset-camera="resetCamera"
         @toggle-presenting="togglePresenting"
@@ -347,6 +405,11 @@ onUnmounted(() => {
         @open-audio-sync="isAudioSyncOpen = true"
         @toggle-chroma="handleToggleChroma"
         @toggle-spotlight="isSpotlightActive = !isSpotlightActive"
+        @toggle-audio="handleToggleAudio"
+        @toggle-crt="isCrtFilterActive = !isCrtFilterActive"
+        @toggle-progressive-reveal="isProgressiveReveal = !isProgressiveReveal"
+        @toggle-micro-drift="isMicroDriftActive = !isMicroDriftActive"
+        @start-auto-produce="autoProducer.startAutoProduce"
       />
 
       <!-- Scene Header (Narrative HUD) -->
@@ -371,6 +434,10 @@ onUnmounted(() => {
         :get-node-by-id="getNodeById"
         :is-spotlight-active="isSpotlightActive"
         :active-node-ids="activeNodeIds"
+        :is-progressive-reveal="isProgressiveReveal"
+        :revealed-node-ids="revealedNodeIds"
+        :is-crt-filter-active="isCrtFilterActive"
+        :is-micro-drift-active="isMicroDriftActive"
         @start-pan="startPan"
         @pan="handlePanMove"
         @end-pan="handlePanEnd"
@@ -433,6 +500,19 @@ onUnmounted(() => {
       :is-open="isRenderOpen"
       :project="{ meta: presentationMeta, nodes, edges, scenes }"
       @close="isRenderOpen = false"
+    />
+
+    <!-- Closed Captions Broadcast Bar (Visible during presentation & auto-producing) -->
+    <ClosedCaptionsBar
+      v-if="isPresenting"
+      :caption="autoProducer.currentCaption.value || (speechEngine.isSpeaking.value ? speechEngine.currentSpokenText.value : currentScene?.narrationText || '')"
+    />
+
+    <!-- 3... 2... 1... Auto-Producer Countdown Overlay -->
+    <CountdownOverlay
+      :active="autoProducer.autoProducePhase.value === 'countdown'"
+      :number="autoProducer.countdownNumber.value"
+      @cancel="autoProducer.cancelAutoProduce"
     />
 
     <!-- Floating Recording HUD (discreet pill during live 60fps recording) -->
