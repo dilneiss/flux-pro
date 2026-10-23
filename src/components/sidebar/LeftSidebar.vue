@@ -56,7 +56,9 @@ const emit = defineEmits([
   'load-project',
   'undo',
   'redo',
-  'generate-thumbnail'
+  'generate-thumbnail',
+  'generate-from-topic',
+  'start-direct-render'
 ]);
 
 const currentTab = ref('nodes');
@@ -184,6 +186,7 @@ onUnmounted(() => {
       @update:ai-prompt-text="(val) => emit('update:aiPromptText', val)"
       @update:canvas-theme="(val) => emit('update:canvasTheme', val)"
       @generate-graph="() => emit('generate-graph')"
+      @generate-from-topic="(payload) => emit('generate-from-topic', payload)"
     />
 
     <!-- Tab 4: Export -->
@@ -199,6 +202,7 @@ onUnmounted(() => {
       @undo="() => emit('undo')"
       @redo="() => emit('redo')"
       @generate-thumbnail="() => emit('generate-thumbnail')"
+      @start-direct-render="() => emit('start-direct-render')"
     />
 
     <!-- Secondary Variant Flyout Panel (Slides out right next to dock) -->

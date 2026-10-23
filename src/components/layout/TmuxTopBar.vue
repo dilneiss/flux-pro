@@ -59,7 +59,11 @@ defineProps({
   aspectRatio: {
     type: String,
     default: '16:9'
-  }
+  },
+  isTimelineOpen: {
+    type: Boolean,
+    default: true
+  },
 });
 
 const emit = defineEmits([
@@ -79,7 +83,8 @@ const emit = defineEmits([
   'toggle-bgm',
   'toggle-ghost-cursor',
   'toggle-aspect-ratio',
-  'generate-thumbnail'
+  'generate-thumbnail',
+  'toggle-timeline'
 ]);
 </script>
 
@@ -195,6 +200,15 @@ const emit = defineEmits([
         <span>💡</span> Spotlight
       </button>
 
+      <button
+        @click="emit('toggle-timeline')"
+        :class="isTimelineOpen ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 font-bold' : 'bg-slate-900 text-slate-500 border-slate-800'"
+        class="px-2 py-0.5 rounded border transition flex items-center gap-1 font-mono"
+        title="Expandir / Recolher Timeline Visual Multi-Track"
+      >
+        <span>🎞</span>
+        <span>Timeline</span>
+      </button>
       <!-- Format Selector (16:9 vs 9:16) -->
       <button
         @click="emit('toggle-aspect-ratio')"

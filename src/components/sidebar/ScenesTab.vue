@@ -21,6 +21,22 @@ const emit = defineEmits([
   'toggle-live-recording',
   'speak-scene'
 ]);
+
+const onSceneAudioUpload = (e, scene) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+  scene.audioUrl = url;
+  scene.audioFileName = file.name;
+
+  const audio = new Audio(url);
+  audio.onloadedmetadata = () => {
+    if (audio.duration && !isNaN(audio.duration)) {
+      scene.duration = Number(audio.duration.toFixed(1));
+    }
+  };
+};
 </script>
 
 <template>
@@ -78,8 +94,8 @@ const emit = defineEmits([
             #{{ String(idx + 1).padStart(2, '0') }} {{ scene.name }}
           </span>
           <div class="flex items-center gap-1.5">
-            <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
-              ~{{ scene.duration || 5 }}s
+            <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold">
+              {{ scene.duration || 5 }}s
             </span>
             <span class="text-[10px] text-slate-500">{{ Math.round((scene.zoom || 1) * 100) }}%</span>
             <button
@@ -96,16 +112,16 @@ const emit = defineEmits([
         <div class="text-[11px] text-white font-medium truncate">{{ scene.title }}</div>
         <div class="text-[10px] text-cyan-300/80 truncate font-mono">{{ scene.subtitle }}</div>
 
-        <!-- Narration text preview / editor -->
-        <div v-if="currentSceneIndex === idx" class="pt-1 border-t border-slate-800/80 space-y-1" @click.stop>
+        <!-- Narration text & Audio file per scene -->
+        <div v-if="currentSceneIndex === idx" class="pt-1 border-t border-slate-800/80 space-y-1.5" @click.stop>
           <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-            <span>🗣 Narração da Cena:</span>
+            <span>🗣 Narração / Áudio:</span>
             <button
               @click="emit('speak-scene', scene)"
-              class="text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-              title="Ouvir Narração Desta Cena"
+              class="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-bold"
+              title="Ouvir Áudio/Voz Desta Cena"
             >
-              <span>🔊</span> Testar Voz
+              <span>🔊</span> {{ scene.audioUrl ? 'Tocar Áudio' : 'Testar Voz' }}
             </button>
           </div>
           <textarea
@@ -114,6 +130,18 @@ const emit = defineEmits([
             class="w-full bg-[#080b10] border border-slate-700/80 rounded p-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-500 font-sans leading-relaxed"
             placeholder="Texto falado durante esta cena..."
           ></textarea>
+
+          <!-- Audio Upload Picker -->
+          <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-0.5">
+            <label class="cursor-pointer text-emerald-400 hover:text-emerald-300 flex items-center gap-1 bg-emerald-950/40 border border-emerald-800/60 px-2 py-0.5 rounded">
+              <span>🎵</span>
+              <span>{{ scene.audioUrl ? 'Trocar Áudio MP3' : '+ Anexar Áudio (.mp3/.wav)' }}</span>
+              <input type="file" accept="audio/*" class="hidden" @change="onSceneAudioUpload($event, scene)" />
+            </label>
+            <span v-if="scene.audioUrl" class="text-slate-400 text-[9px] truncate max-w-[110px]" :title="scene.audioFileName">
+              {{ scene.audioFileName || 'audio.mp3' }}
+            </span>
+          </div>
         </div>
         <div v-else-if="scene.narrationText" class="text-[10px] text-slate-400 line-clamp-1 italic font-sans">
           "{{ scene.narrationText }}"

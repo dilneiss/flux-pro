@@ -25,7 +25,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['open-render-modal', 'load-project', 'undo', 'redo', 'generate-thumbnail']);
+const emit = defineEmits(['open-render-modal', 'load-project', 'undo', 'redo', 'generate-thumbnail', 'start-direct-render']);
 
 const exportOutput = ref('');
 const feedbackMsg = ref('');
@@ -213,6 +213,14 @@ const copyYouTubeChapters = () => {
 
     <!-- Remotion & Broadcast Code -->
     <div class="space-y-2 font-mono pt-1">
+      <button
+        @click="emit('start-direct-render')"
+        class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-lg transition flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.35)]"
+        title="Renderiza em canvas offscreen 60 FPS e baixa MP4/WebM sem pedir captura de tela!"
+      >
+        <span>🚀</span> Renderizar MP4 Direto (Sem Popup)
+      </button>
+
       <button
         @click="exportRemotion"
         class="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg transition flex items-center justify-center gap-2 shadow-lg"

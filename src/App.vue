@@ -14,6 +14,8 @@ import { useAutoProducer } from '@/composables/useAutoProducer';
 import ClosedCaptionsBar from '@/components/layout/ClosedCaptionsBar.vue';
 import CountdownOverlay from '@/components/layout/CountdownOverlay.vue';
 import { generateThumbnailPng } from '@/utils/thumbnailGenerator';
+import StudioTimeline from '@/components/timeline/StudioTimeline.vue';
+import { useDirectCanvasRenderer } from '@/composables/useDirectCanvasRenderer';
 import {
   DEFAULT_META,
   DEFAULT_NODES,
@@ -49,6 +51,9 @@ const isMicroDriftActive = ref(false);
 const isBgmActive = ref(false);
 const isGhostCursorActive = ref(true);
 const aspectRatio = ref('16:9');
+const isTimelineOpen = ref(true);
+const currentPlaybackTime = ref(0);
+const directRenderer = useDirectCanvasRenderer();
 const activeNodeIds = computed(() => {
   if (isPresenting.value) {
     if (currentScene.value?.activeNodeIds?.length) {
@@ -171,9 +176,13 @@ const handleLoadProject = (data) => {
 };
 
 const handleSpeakScene = (scene) => {
-  const text = scene.narrationText || scene.title;
-  soundFX.playConnectBeep();
-  speechEngine.speak(text);
+  if (scene.audioUrl) {
+    soundFX.playAudioUrl(scene.audioUrl);
+  } else {
+    const text = scene.narrationText || scene.title;
+    soundFX.playConnectBeep();
+    speechEngine.speak(text);
+  }
 };
 
 const handleToggleBgm = () => {
@@ -194,7 +203,37 @@ const handleGenerateThumbnail = () => {
     canvasTheme: canvasTheme.value
   });
 };
-const { aiPromptText, generateGraph } = useAiDirector();
+const { aiPromptText, generateGraph, generateFromTopic, aiProvider, ollamaModel } = useAiDirector();
+
+const handleGenerateFromTopic = async (payload) => {
+  if (payload.provider) aiProvider.value = payload.provider;
+  if (payload.model) ollamaModel.value = payload.model;
+  const result = await generateFromTopic(payload.topic);
+  if (result) {
+    nodes.value = result.nodes;
+    edges.value = result.edges;
+    scenes.value = result.scenes;
+    soundFX.playChime();
+    activateScene(0, camera);
+  }
+};
+
+const handleStartDirectRender = () => {
+  soundFX.playChime();
+  directRenderer.startDirectRender({
+    nodes: nodes.value,
+    edges: edges.value,
+    scenes: scenes.value,
+    presentationMeta: presentationMeta.value,
+    aspectRatio: aspectRatio.value,
+    soundFX,
+    speechEngine
+  });
+};
+
+const handleSeekTimeline = (seconds) => {
+  currentPlaybackTime.value = seconds;
+};
 
 // In-Browser MediaRecorder Screen Recording
 const handleToggleRecordScreen = async () => {
@@ -409,6 +448,8 @@ onUnmounted(() => {
       @undo="undo"
       @redo="redo"
       @generate-thumbnail="handleGenerateThumbnail"
+      @generate-from-topic="handleGenerateFromTopic"
+      @start-direct-render="handleStartDirectRender"
     />
     <!-- Main Workspace -->
     <main class="flex-1 flex flex-col relative overflow-hidden">
@@ -429,6 +470,7 @@ onUnmounted(() => {
         :is-bgm-active="isBgmActive"
         :is-ghost-cursor-active="isGhostCursorActive"
         :aspect-ratio="aspectRatio"
+        :is-timeline-open="isTimelineOpen"
         @auto-layout="autoLayout"
         @reset-camera="resetCamera"
         @toggle-presenting="togglePresenting"
@@ -446,6 +488,7 @@ onUnmounted(() => {
         @toggle-ghost-cursor="isGhostCursorActive = !isGhostCursorActive"
         @toggle-aspect-ratio="handleToggleAspectRatio"
         @generate-thumbnail="handleGenerateThumbnail"
+        @toggle-timeline="isTimelineOpen = !isTimelineOpen"
       />
 
       <!-- Scene Header (Narrative HUD) -->
@@ -492,6 +535,19 @@ onUnmounted(() => {
         @drop-file="handleDropFile"
         @upload-media="handleUploadMedia"
         @drop-node="handleAddNode"
+      />
+
+      <!-- Studio Multi-Track Timeline (Track 1: Cenas, Track 2: Narração/Waveform, Track 3: Eventos) -->
+      <StudioTimeline
+        :scenes="scenes"
+        :current-scene-index="currentSceneIndex"
+        :is-open="isTimelineOpen && !isPresenting"
+        :is-playing="keyframePlayback.isPlayingKeyframes.value || autoProducer.isAutoProducing.value"
+        :current-playback-time="currentPlaybackTime"
+        @seek-time="handleSeekTimeline"
+        @activate-scene="(idx) => activateScene(idx, camera)"
+        @toggle-open="isTimelineOpen = !isTimelineOpen"
+        @toggle-play="() => keyframePlayback.togglePlayback(camera)"
       />
 
       <!-- TMUX Bottom Bar -->

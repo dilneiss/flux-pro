@@ -65,6 +65,57 @@ class SoundFXSynthesizer {
     return this.mediaStreamDestination ? this.mediaStreamDestination.stream : null;
   }
 
+  /**
+   * Plays a custom uploaded audio file (MP3/WAV) connected into the MasterAudioMixer
+   * Automatically triggers Auto-Ducking on BGM and routes through the recording stream!
+   */
+  playAudioUrl(url, { onStart, onEnd } = {}) {
+    if (!url) {
+      if (onEnd) onEnd();
+      return () => {};
+    }
+    this.init();
+    try {
+      const audio = new Audio(url);
+      audio.crossOrigin = 'anonymous';
+
+      if (this.ctx && this.ctx.createMediaElementSource) {
+        try {
+          const source = this.ctx.createMediaElementSource(audio);
+          this._connectSource(source);
+        } catch {
+          // Handled if already connected
+        }
+      }
+
+      this.setDucking(true);
+      if (onStart) onStart();
+
+      audio.onended = () => {
+        this.setDucking(false);
+        if (onEnd) onEnd();
+      };
+
+      audio.onerror = () => {
+        this.setDucking(false);
+        if (onEnd) onEnd();
+      };
+
+      audio.play().catch(() => {
+        this.setDucking(false);
+        if (onEnd) onEnd();
+      });
+
+      return () => {
+        audio.pause();
+        this.setDucking(false);
+      };
+    } catch {
+      if (onEnd) onEnd();
+      return () => {};
+    }
+  }
+
   setEnabled(val) {
     this.enabled = !!val;
     if (this.masterGain && this.ctx) {
